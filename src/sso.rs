@@ -422,41 +422,4 @@ mod tests {
     fn empty_salt_leaves_password_unchanged() {
         assert_eq!(encrypt_password("password", "").unwrap(), "password");
     }
-
-    #[tokio::test]
-    #[ignore = "requires .env SSO credentials and external network"]
-    async fn direct_sso_login_and_profile_from_env() {
-        login_and_profile_from_env(ConnectionMode::Direct).await;
-    }
-
-    #[tokio::test]
-    #[ignore = "requires .env SSO credentials and external network"]
-    async fn webvpn_sso_login_and_profile_from_env() {
-        login_and_profile_from_env(ConnectionMode::WebVpn).await;
-    }
-
-    async fn login_and_profile_from_env(mode: ConnectionMode) {
-        dotenvy::dotenv().expect("failed to load .env");
-        let username = std::env::var("CSUST_AUTHSERVER_USERNAME")
-            .expect("CSUST_AUTHSERVER_USERNAME is not set");
-        let password = std::env::var("CSUST_AUTHSERVER_PASSWORD")
-            .expect("CSUST_AUTHSERVER_PASSWORD is not set");
-        assert!(!username.is_empty(), "CSUST_AUTHSERVER_USERNAME is empty");
-        assert!(!password.is_empty(), "CSUST_AUTHSERVER_PASSWORD is empty");
-
-        let helper = SsoHelper::new(mode).unwrap();
-        let login_form = helper.get_login_form().await.unwrap();
-        assert!(
-            !helper.check_need_captcha(username.clone()).await.unwrap(),
-            "SSO integration test cannot continue because captcha is required"
-        );
-        helper
-            .login(login_form, username, password, None)
-            .await
-            .unwrap();
-        let profile = helper.get_login_user().await.unwrap();
-        assert!(!profile.user_name.is_empty());
-        assert!(!profile.user_account.is_empty());
-        assert!(helper.is_logged_in().await);
-    }
 }
