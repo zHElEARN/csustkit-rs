@@ -24,6 +24,8 @@ const WEBVPN_ENCLIENT_URL: &str = "https://vpn.csust.edu.cn/enclient/";
 const WEBVPN_CAS_CHECK_URL: &str =
     "https://vpn.csust.edu.cn/enclient/api/users/admin/custom/page/login/sso/cas";
 const RANDOM_CHARS: &[u8] = b"ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678";
+// The WebVPN gateway returns HTTP 500 when the User-Agent header is absent.
+const SSO_USER_AGENT: &str = concat!("csustkit-rs/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error, uniffi::Error)]
 pub enum SsoError {
@@ -92,11 +94,13 @@ impl SsoHelper {
         let client = Client::builder()
             .cookie_provider(Arc::clone(&cookie_jar))
             .redirect(Policy::limited(10))
+            .user_agent(SSO_USER_AGENT)
             .build()
             .map_err(|_| SsoError::ClientBuildFailed)?;
         let no_redirect_client = Client::builder()
             .cookie_provider(Arc::clone(&cookie_jar))
             .redirect(Policy::none())
+            .user_agent(SSO_USER_AGENT)
             .build()
             .map_err(|_| SsoError::ClientBuildFailed)?;
 
@@ -200,12 +204,11 @@ impl SsoHelper {
             .map_err(|_| SsoError::LoginFailed)?;
 
         let final_url = response.url().clone();
-        let body = response.text().await.unwrap_or_default();
 
         let mut check_url = final_url.clone();
         if self.mode == ConnectionMode::WebVpn {
             if !urls_equal(&final_url, WEBVPN_ENCLIENT_URL) {
-                return Err(login_failure_from_body(&body));
+                return Err(SsoError::LoginFailed);
             }
 
             let check_response = self
@@ -222,7 +225,7 @@ impl SsoHelper {
         if urls_equal(&check_url, &ehall_index) || urls_equal(&final_url, &ehall_default_index) {
             Ok(())
         } else {
-            Err(login_failure_from_body(&body))
+            Err(SsoError::LoginFailed)
         }
     }
 
@@ -348,14 +351,6 @@ fn random_string(length: usize) -> Result<String, SsoError> {
         .collect())
 }
 
-fn login_failure_from_body(body: &str) -> SsoError {
-    if body.contains("showErrorTip") {
-        SsoError::LoginFailed
-    } else {
-        SsoError::LoginFailed
-    }
-}
-
 fn urls_equal(actual: &Url, expected: &str) -> bool {
     Url::parse(expected)
         .map(|expected_url| actual == &expected_url)
@@ -429,37 +424,32 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires USERNAME and PASSWORD environment variables and external network"]
+    #[ignore = "requires .env SSO credentials and external network"]
     async fn direct_sso_login_and_profile_from_env() {
         login_and_profile_from_env(ConnectionMode::Direct).await;
     }
 
     #[tokio::test]
-    #[ignore = "requires USERNAME and PASSWORD environment variables and external network"]
+    #[ignore = "requires .env SSO credentials and external network"]
     async fn webvpn_sso_login_and_profile_from_env() {
         login_and_profile_from_env(ConnectionMode::WebVpn).await;
     }
 
     async fn login_and_profile_from_env(mode: ConnectionMode) {
-        let Ok(username) = std::env::var("USERNAME") else {
-            eprintln!("skipping SSO integration test: USERNAME is not set");
-            return;
-        };
-        let Ok(password) = std::env::var("PASSWORD") else {
-            eprintln!("skipping SSO integration test: PASSWORD is not set");
-            return;
-        };
-        if username.is_empty() || password.is_empty() {
-            eprintln!("skipping SSO integration test: USERNAME or PASSWORD is empty");
-            return;
-        }
+        dotenvy::dotenv().expect("failed to load .env");
+        let username = std::env::var("CSUST_AUTHSERVER_USERNAME")
+            .expect("CSUST_AUTHSERVER_USERNAME is not set");
+        let password = std::env::var("CSUST_AUTHSERVER_PASSWORD")
+            .expect("CSUST_AUTHSERVER_PASSWORD is not set");
+        assert!(!username.is_empty(), "CSUST_AUTHSERVER_USERNAME is empty");
+        assert!(!password.is_empty(), "CSUST_AUTHSERVER_PASSWORD is empty");
 
         let helper = SsoHelper::new(mode).unwrap();
         let login_form = helper.get_login_form().await.unwrap();
-        if helper.check_need_captcha(username.clone()).await.unwrap() {
-            eprintln!("skipping SSO integration test: captcha is required");
-            return;
-        }
+        assert!(
+            !helper.check_need_captcha(username.clone()).await.unwrap(),
+            "SSO integration test cannot continue because captcha is required"
+        );
         helper
             .login(login_form, username, password, None)
             .await
@@ -467,5 +457,6 @@ mod tests {
         let profile = helper.get_login_user().await.unwrap();
         assert!(!profile.user_name.is_empty());
         assert!(!profile.user_account.is_empty());
+        assert!(helper.is_logged_in().await);
     }
 }
