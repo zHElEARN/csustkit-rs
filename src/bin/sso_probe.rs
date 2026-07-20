@@ -1,6 +1,9 @@
 use std::env;
 
-use csustkit::{ConnectionMode, SsoError, SsoHelper};
+use csustkit::{
+    ConnectionMode,
+    sso::{SsoError, SsoHelper},
+};
 
 #[derive(Debug)]
 enum ProbeError {

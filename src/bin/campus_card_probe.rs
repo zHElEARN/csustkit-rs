@@ -1,7 +1,9 @@
 use std::{env, sync::Arc};
 
 use csustkit::{
-    Campus, CampusCardError, CampusCardHelper, ConnectionMode, CsustSession, SsoError, SsoHelper,
+    ConnectionMode, CsustSession,
+    campus_card::{Campus, CampusCardError, CampusCardHelper},
+    sso::{SsoError, SsoHelper},
 };
 
 #[derive(Debug)]
