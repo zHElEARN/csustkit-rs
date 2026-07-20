@@ -27,7 +27,7 @@ const RANDOM_CHARS: &[u8] = b"ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678";
 // The WebVPN gateway returns HTTP 500 when the User-Agent header is absent.
 const SSO_USER_AGENT: &str = concat!("csustkit-rs/", env!("CARGO_PKG_VERSION"));
 
-#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error, uniffi::Error)]
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum SsoError {
     #[error("SSO client build failed")]
     ClientBuildFailed,
@@ -47,13 +47,13 @@ pub enum SsoError {
     NotLoggedIn,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SsoLoginForm {
     pub pwd_encrypt_salt: String,
     pub execution: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, uniffi::Record)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SsoProfile {
     pub category_name: String,
@@ -78,7 +78,6 @@ struct CheckNeedCaptchaResponse {
     is_need: bool,
 }
 
-#[derive(uniffi::Object)]
 pub struct SsoHelper {
     mode: ConnectionMode,
     client: Client,
@@ -86,9 +85,7 @@ pub struct SsoHelper {
     cookie_jar: Arc<Jar>,
 }
 
-#[uniffi::export]
 impl SsoHelper {
-    #[uniffi::constructor]
     pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, SsoError> {
         let cookie_jar = Arc::new(Jar::default());
         let client = Client::builder()

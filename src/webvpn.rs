@@ -9,7 +9,7 @@ const WEBVPN_KEY: &[u8; 16] = b"CASB2021EnLink!!";
 const WEBVPN_IV: &[u8; 16] = b"CASB2021EnLink!!";
 const WEBVPN_PREFIX: &str = "webvpn";
 
-#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error, uniffi::Error)]
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum WebVpnError {
     #[error("URL encryption failed")]
     UrlEncryptionFailed,
@@ -21,7 +21,6 @@ pub enum WebVpnError {
     HostDecryptionFailed,
 }
 
-#[uniffi::export]
 pub fn webvpn_encrypt_url(original_url: String) -> Result<String, WebVpnError> {
     let url = Url::parse(&original_url).map_err(|_| WebVpnError::UrlEncryptionFailed)?;
     let scheme = url.scheme();
@@ -48,7 +47,6 @@ pub fn webvpn_encrypt_url(original_url: String) -> Result<String, WebVpnError> {
     Ok(encrypted_url)
 }
 
-#[uniffi::export]
 pub fn webvpn_decrypt_url(vpn_url: String) -> Result<String, WebVpnError> {
     let url = Url::parse(&vpn_url).map_err(|_| WebVpnError::UrlDecryptionFailed)?;
     let path = url.path();
