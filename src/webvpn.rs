@@ -11,20 +11,21 @@ const WEBVPN_PREFIX: &str = "webvpn";
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
 pub enum WebVpnError {
-    #[error("URL encryption failed")]
-    UrlEncryptionFailed,
-    #[error("URL decryption failed")]
-    UrlDecryptionFailed,
-    #[error("Host encryption failed")]
-    HostEncryptionFailed,
-    #[error("Host decryption failed")]
-    HostDecryptionFailed,
+    #[error("URL 加密失败: {0}")]
+    UrlEncryptionFailed(String),
+    #[error("URL 解密失败: {0}")]
+    UrlDecryptionFailed(String),
+    #[error("主机名加密失败: {0}")]
+    HostEncryptionFailed(String),
+    #[error("主机名解密失败: {0}")]
+    HostDecryptionFailed(String),
 }
 
-pub fn webvpn_encrypt_url(original_url: String) -> Result<String, WebVpnError> {
-    let url = Url::parse(&original_url).map_err(|_| WebVpnError::UrlEncryptionFailed)?;
+pub fn webvpn_encrypt_url(url: Url) -> Result<Url, WebVpnError> {
     let scheme = url.scheme();
-    let host = url.host_str().ok_or(WebVpnError::UrlEncryptionFailed)?;
+    let host = url
+        .host_str()
+        .ok_or_else(|| WebVpnError::UrlEncryptionFailed("无法获取主机名/协议".to_owned()))?;
 
     let mut original_host = host.to_owned();
     if let Some(port) = url.port() {
@@ -36,24 +37,30 @@ pub fn webvpn_encrypt_url(original_url: String) -> Result<String, WebVpnError> {
     let final_path = match url.path() {
         "" => "/",
         path if path.starts_with('/') => path,
-        _ => return Err(WebVpnError::UrlEncryptionFailed),
+        _ => {
+            return Err(WebVpnError::UrlEncryptionFailed(
+                "路径格式不正确".to_owned(),
+            ));
+        }
     };
 
     let mut encrypted_url =
         format!("https://{WEBVPN_HOST}/{scheme}/{WEBVPN_PREFIX}{encrypted_host}{final_path}");
     append_query_and_fragment(&mut encrypted_url, url.query(), url.fragment());
 
-    Url::parse(&encrypted_url).map_err(|_| WebVpnError::UrlEncryptionFailed)?;
+    let encrypted_url = Url::parse(&encrypted_url)
+        .map_err(|_| WebVpnError::UrlEncryptionFailed("无法构建加密后的 URL".to_owned()))?;
     Ok(encrypted_url)
 }
 
-pub fn webvpn_decrypt_url(vpn_url: String) -> Result<String, WebVpnError> {
-    let url = Url::parse(&vpn_url).map_err(|_| WebVpnError::UrlDecryptionFailed)?;
+pub fn webvpn_decrypt_url(url: Url) -> Result<Url, WebVpnError> {
     let path = url.path();
     let path_components = path.split('/').collect::<Vec<_>>();
 
     if path_components.len() < 3 {
-        return Err(WebVpnError::UrlDecryptionFailed);
+        return Err(WebVpnError::UrlDecryptionFailed(
+            "WebVPN URL 路径格式不正确".to_owned(),
+        ));
     }
 
     let scheme = path_components[1];
@@ -61,19 +68,21 @@ pub fn webvpn_decrypt_url(vpn_url: String) -> Result<String, WebVpnError> {
 
     let encrypted_host = encrypted_host_component
         .strip_prefix(WEBVPN_PREFIX)
-        .ok_or(WebVpnError::UrlDecryptionFailed)?;
+        .ok_or_else(|| WebVpnError::UrlDecryptionFailed("未找到指定的 WebVPN 前缀".to_owned()))?;
     let decrypted_host = decrypt_host(encrypted_host)?;
 
     let mut host_parts = decrypted_host.split(':');
     let host = host_parts
         .next()
         .filter(|host| !host.is_empty())
-        .ok_or(WebVpnError::UrlDecryptionFailed)?;
+        .ok_or_else(|| WebVpnError::UrlDecryptionFailed("解密后主机名为空".to_owned()))?;
     let port = host_parts.next().and_then(|port| port.parse::<u16>().ok());
 
     let prefix_to_drop = format!("/{scheme}/{encrypted_host_component}");
     if !path.starts_with(&prefix_to_drop) {
-        return Err(WebVpnError::UrlDecryptionFailed);
+        return Err(WebVpnError::UrlDecryptionFailed(
+            "URL 路径与预期格式不符".to_owned(),
+        ));
     }
 
     let dropped_path = &path[prefix_to_drop.len()..];
@@ -93,25 +102,28 @@ pub fn webvpn_decrypt_url(vpn_url: String) -> Result<String, WebVpnError> {
     original_url.push_str(&original_path);
     append_query_and_fragment(&mut original_url, url.query(), url.fragment());
 
-    Url::parse(&original_url).map_err(|_| WebVpnError::UrlDecryptionFailed)?;
+    let original_url = Url::parse(&original_url)
+        .map_err(|_| WebVpnError::UrlDecryptionFailed("无法构建解密后的 URL".to_owned()))?;
     Ok(original_url)
 }
 
 fn encrypt_host(text: &str) -> Result<String, WebVpnError> {
     let encrypted = Aes128CbcEnc::new_from_slices(WEBVPN_KEY, WEBVPN_IV)
-        .map_err(|_| WebVpnError::HostEncryptionFailed)?
+        .map_err(|error| WebVpnError::HostEncryptionFailed(error.to_string()))?
         .encrypt_padded_vec::<Pkcs7>(text.as_bytes());
     Ok(hex::encode(encrypted))
 }
 
 fn decrypt_host(hex_text: &str) -> Result<String, WebVpnError> {
-    let encrypted = hex::decode(hex_text).map_err(|_| WebVpnError::HostDecryptionFailed)?;
+    let encrypted = hex::decode(hex_text)
+        .map_err(|error| WebVpnError::HostDecryptionFailed(error.to_string()))?;
     let decrypted = Aes128CbcDec::new_from_slices(WEBVPN_KEY, WEBVPN_IV)
-        .map_err(|_| WebVpnError::HostDecryptionFailed)?
+        .map_err(|error| WebVpnError::HostDecryptionFailed(error.to_string()))?
         .decrypt_padded_vec::<Pkcs7>(&encrypted)
-        .map_err(|_| WebVpnError::HostDecryptionFailed)?;
+        .map_err(|error| WebVpnError::HostDecryptionFailed(error.to_string()))?;
 
-    String::from_utf8(decrypted).map_err(|_| WebVpnError::HostDecryptionFailed)
+    String::from_utf8(decrypted)
+        .map_err(|error| WebVpnError::HostDecryptionFailed(error.to_string()))
 }
 
 fn append_query_and_fragment(url: &mut String, query: Option<&str>, fragment: Option<&str>) {
@@ -148,8 +160,8 @@ mod tests {
 
         for (vpn_url, original_url) in cases {
             assert_eq!(
-                webvpn_decrypt_url(vpn_url.to_owned()).unwrap(),
-                original_url
+                webvpn_decrypt_url(Url::parse(vpn_url).unwrap()).unwrap(),
+                Url::parse(original_url).unwrap()
             );
         }
     }
@@ -173,8 +185,8 @@ mod tests {
 
         for (original_url, vpn_url) in cases {
             assert_eq!(
-                webvpn_encrypt_url(original_url.to_owned()).unwrap(),
-                vpn_url
+                webvpn_encrypt_url(Url::parse(original_url).unwrap()).unwrap(),
+                Url::parse(vpn_url).unwrap()
             );
         }
     }
@@ -189,7 +201,8 @@ mod tests {
         ];
 
         for url in urls {
-            let encrypted = webvpn_encrypt_url(url.to_owned()).unwrap();
+            let url = Url::parse(url).unwrap();
+            let encrypted = webvpn_encrypt_url(url.clone()).unwrap();
             assert_eq!(webvpn_decrypt_url(encrypted).unwrap(), url);
         }
     }
@@ -197,38 +210,33 @@ mod tests {
     #[test]
     fn encrypt_reports_url_errors() {
         assert_eq!(
-            webvpn_encrypt_url("not a url".to_owned()).unwrap_err(),
-            WebVpnError::UrlEncryptionFailed
-        );
-        assert_eq!(
-            webvpn_encrypt_url("mailto:hello@example.com".to_owned()).unwrap_err(),
-            WebVpnError::UrlEncryptionFailed
+            webvpn_encrypt_url(Url::parse("mailto:hello@example.com").unwrap()).unwrap_err(),
+            WebVpnError::UrlEncryptionFailed("无法获取主机名/协议".to_owned())
         );
     }
 
     #[test]
     fn decrypt_reports_url_errors() {
         assert_eq!(
-            webvpn_decrypt_url("https://vpn.csust.edu.cn/http".to_owned()).unwrap_err(),
-            WebVpnError::UrlDecryptionFailed
+            webvpn_decrypt_url(Url::parse("https://vpn.csust.edu.cn/http").unwrap()).unwrap_err(),
+            WebVpnError::UrlDecryptionFailed("WebVPN URL 路径格式不正确".to_owned())
         );
         assert_eq!(
-            webvpn_decrypt_url("https://vpn.csust.edu.cn/http/notwebvpnabc/".to_owned())
+            webvpn_decrypt_url(Url::parse("https://vpn.csust.edu.cn/http/notwebvpnabc/").unwrap())
                 .unwrap_err(),
-            WebVpnError::UrlDecryptionFailed
+            WebVpnError::UrlDecryptionFailed("未找到指定的 WebVPN 前缀".to_owned())
         );
     }
 
     #[test]
     fn decrypt_reports_host_errors() {
-        assert_eq!(
-            webvpn_decrypt_url("https://vpn.csust.edu.cn/http/webvpnnot-hex/".to_owned())
-                .unwrap_err(),
-            WebVpnError::HostDecryptionFailed
-        );
-        assert_eq!(
-            webvpn_decrypt_url("https://vpn.csust.edu.cn/http/webvpn00/".to_owned()).unwrap_err(),
-            WebVpnError::HostDecryptionFailed
-        );
+        assert!(matches!(
+            webvpn_decrypt_url(Url::parse("https://vpn.csust.edu.cn/http/webvpnnot-hex/").unwrap()),
+            Err(WebVpnError::HostDecryptionFailed(_))
+        ));
+        assert!(matches!(
+            webvpn_decrypt_url(Url::parse("https://vpn.csust.edu.cn/http/webvpn00/").unwrap()),
+            Err(WebVpnError::HostDecryptionFailed(_))
+        ));
     }
 }
