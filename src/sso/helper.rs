@@ -23,6 +23,7 @@ use super::{
 
 const LOGIN_PATH: &str = "/authserver/login?service=https%3A%2F%2Fehall.csust.edu.cn%2Flogin";
 const CAMPUS_CARD_LOGIN_PATH: &str = "/berserker-auth/cas/login/wisedu?targetUrl=https://hxyxh5.csust.edu.cn/plat/?name=loginTransit";
+const MOOC_LOGIN_PATH: &str = "/meol/homepage/common/sso_login.jsp";
 const WEBVPN_ENCLIENT_URL: &str = "https://vpn.csust.edu.cn/enclient/";
 const WEBVPN_CAS_CHECK_URL: &str =
     "https://vpn.csust.edu.cn/enclient/api/users/admin/custom/page/login/sso/cas";
@@ -180,6 +181,31 @@ impl SsoHelper {
         let expected_prefix = make_url(self.mode, ServiceDomain::CampusCard, "/plat");
 
         extract_campus_card_ticket(final_url, &expected_prefix)
+    }
+
+    /// 从已登录的统一身份认证会话登录网络课程中心。
+    pub async fn login_to_mooc(&self) -> Result<(), SsoError> {
+        let response = self
+            .session
+            .client
+            .get(make_url(self.mode, ServiceDomain::Mooc, MOOC_LOGIN_PATH))
+            .send()
+            .await?;
+        let final_url = response.url().clone();
+
+        if final_url.path().contains("/authserver/login") {
+            return Err(SsoError::NotLoggedIn);
+        }
+
+        let personal_url = make_url(self.mode, ServiceDomain::Mooc, "/meol/personal.do");
+        let index_url = make_url(self.mode, ServiceDomain::Mooc, "/meol/index.do");
+        if urls_equal(&final_url, &personal_url) || urls_equal(&final_url, &index_url) {
+            Ok(())
+        } else {
+            Err(SsoError::LoginToMoocFailed(format!(
+                "重定向URL异常: {final_url}"
+            )))
+        }
     }
 
     pub async fn is_logged_in(&self) -> bool {

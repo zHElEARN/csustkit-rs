@@ -8,12 +8,14 @@ pub(crate) enum ServiceDomain {
     AuthServer,
     CampusCard,
     Ehall,
+    Mooc,
 }
 
 impl ServiceDomain {
     fn scheme(self) -> &'static str {
         match self {
             Self::AuthServer | Self::CampusCard | Self::Ehall => "https",
+            Self::Mooc => "http",
         }
     }
 
@@ -22,6 +24,7 @@ impl ServiceDomain {
             Self::AuthServer => "authserver.csust.edu.cn",
             Self::CampusCard => "hxyxh5.csust.edu.cn",
             Self::Ehall => "ehall.csust.edu.cn",
+            Self::Mooc => "pt.csust.edu.cn",
         }
     }
 
@@ -30,6 +33,7 @@ impl ServiceDomain {
             Self::AuthServer => "b9fbab94ec37584ef499d74673ec2c940949105c7b30eca147702d9482299f99",
             Self::CampusCard => "6a312b2d860191c92db8c011e7e418eac2691c647e6e2b00de67552d70884967",
             Self::Ehall => "1e2b5c384f0dc42e4d0db781d590f8e2f8f129ae812718586ddba3948db7b103",
+            Self::Mooc => "ca1e69080fcc45ac45bed760950fd677",
         }
     }
 }
@@ -94,6 +98,14 @@ mod tests {
         assert_eq!(
             make_url(ConnectionMode::WebVpn, ServiceDomain::Ehall, "/index.html"),
             "https://vpn.csust.edu.cn/https/webvpn1e2b5c384f0dc42e4d0db781d590f8e2f8f129ae812718586ddba3948db7b103/index.html",
+        );
+        assert_eq!(
+            make_url(
+                ConnectionMode::WebVpn,
+                ServiceDomain::Mooc,
+                "/meol/index.do"
+            ),
+            "https://vpn.csust.edu.cn/http/webvpnca1e69080fcc45ac45bed760950fd677/meol/index.do",
         );
     }
 }

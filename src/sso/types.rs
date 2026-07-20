@@ -13,6 +13,8 @@ pub enum SsoError {
     LoginFailed(String),
     #[error("校园卡系统登录失败: {0}")]
     LoginToCampusCardFailed(String),
+    #[error("网络课程中心登录失败: {0}")]
+    LoginToMoocFailed(String),
     #[error("统一身份认证未登录")]
     NotLoggedIn,
     #[error(transparent)]
