@@ -8,6 +8,7 @@ use url::Url;
 
 use crate::{
     connection::ConnectionMode,
+    edu::request::send_with_retry,
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
@@ -24,6 +25,9 @@ use super::{
 const LOGIN_PATH: &str = "/authserver/login?service=https%3A%2F%2Fehall.csust.edu.cn%2Flogin";
 const CAMPUS_CARD_LOGIN_PATH: &str = "/berserker-auth/cas/login/wisedu?targetUrl=https://hxyxh5.csust.edu.cn/plat/?name=loginTransit";
 const MOOC_LOGIN_PATH: &str = "/meol/homepage/common/sso_login.jsp";
+const EDUCATION_SSO_PATH: &str = "/sso.jsp";
+const EDUCATION_LOGIN_PATH: &str =
+    "/authserver/login?service=http%3A%2F%2Fxk.csust.edu.cn%2Fsso.jsp";
 const WEBVPN_ENCLIENT_URL: &str = "https://vpn.csust.edu.cn/enclient/";
 const WEBVPN_CAS_CHECK_URL: &str =
     "https://vpn.csust.edu.cn/enclient/api/users/admin/custom/page/login/sso/cas";
@@ -205,6 +209,21 @@ impl SsoHelper {
             Err(SsoError::LoginToMoocFailed(format!(
                 "重定向URL异常: {final_url}"
             )))
+        }
+    }
+
+    /// 从已登录的统一身份认证会话登录教务系统。
+    pub async fn login_to_education(&self) -> Result<(), SsoError> {
+        let education_url = make_url(self.mode, ServiceDomain::Education, EDUCATION_SSO_PATH);
+        send_with_retry(|| self.session.client.get(&education_url)).await?;
+
+        let login_url = make_url(self.mode, ServiceDomain::AuthServer, EDUCATION_LOGIN_PATH);
+        let response = send_with_retry(|| self.session.client.get(&login_url)).await?;
+        let body = String::from_utf8_lossy(&response.body);
+        if body.contains("账号登录") {
+            Err(SsoError::NotLoggedIn)
+        } else {
+            Ok(())
         }
     }
 

@@ -1,5 +1,6 @@
 pub mod campus_card;
 pub mod connection;
+pub mod edu;
 pub mod mooc;
 pub mod session;
 pub mod sso;

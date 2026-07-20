@@ -7,6 +7,7 @@ const WEBVPN_PREFIX: &str = "webvpn";
 pub(crate) enum ServiceDomain {
     AuthServer,
     CampusCard,
+    Education,
     Ehall,
     Mooc,
 }
@@ -15,7 +16,7 @@ impl ServiceDomain {
     fn scheme(self) -> &'static str {
         match self {
             Self::AuthServer | Self::CampusCard | Self::Ehall => "https",
-            Self::Mooc => "http",
+            Self::Education | Self::Mooc => "http",
         }
     }
 
@@ -23,6 +24,7 @@ impl ServiceDomain {
         match self {
             Self::AuthServer => "authserver.csust.edu.cn",
             Self::CampusCard => "hxyxh5.csust.edu.cn",
+            Self::Education => "xk.csust.edu.cn",
             Self::Ehall => "ehall.csust.edu.cn",
             Self::Mooc => "pt.csust.edu.cn",
         }
@@ -32,6 +34,7 @@ impl ServiceDomain {
         match self {
             Self::AuthServer => "b9fbab94ec37584ef499d74673ec2c940949105c7b30eca147702d9482299f99",
             Self::CampusCard => "6a312b2d860191c92db8c011e7e418eac2691c647e6e2b00de67552d70884967",
+            Self::Education => "505c0e70383db2ebb7035169513d1ffa",
             Self::Ehall => "1e2b5c384f0dc42e4d0db781d590f8e2f8f129ae812718586ddba3948db7b103",
             Self::Mooc => "ca1e69080fcc45ac45bed760950fd677",
         }
@@ -83,6 +86,10 @@ mod tests {
             make_url(ConnectionMode::Direct, ServiceDomain::Ehall, "index.html"),
             "https://ehall.csust.edu.cn/index.html",
         );
+        assert_eq!(
+            make_url(ConnectionMode::Direct, ServiceDomain::Education, "/sso.jsp"),
+            "http://xk.csust.edu.cn/sso.jsp",
+        );
     }
 
     #[test]
@@ -106,6 +113,10 @@ mod tests {
                 "/meol/index.do"
             ),
             "https://vpn.csust.edu.cn/http/webvpnca1e69080fcc45ac45bed760950fd677/meol/index.do",
+        );
+        assert_eq!(
+            make_url(ConnectionMode::WebVpn, ServiceDomain::Education, "/sso.jsp"),
+            "https://vpn.csust.edu.cn/http/webvpn505c0e70383db2ebb7035169513d1ffa/sso.jsp",
         );
     }
 }
