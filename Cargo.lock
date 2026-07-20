@@ -340,6 +340,7 @@ dependencies = [
  "cbc",
  "getrandom 0.4.3",
  "hex",
+ "percent-encoding",
  "reqwest",
  "scraper",
  "serde",

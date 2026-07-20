@@ -12,6 +12,7 @@ base64 = "0.22.1"
 cbc = { version = "0.2.1", features = ["alloc"] }
 getrandom = "0.4.3"
 hex = "0.4.3"
+percent-encoding = "2.3.2"
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "cookies", "json", "form", "gzip", "brotli", "deflate", "http2", "system-proxy"] }
 scraper = "0.27.0"
 serde = { version = "1.0.228", features = ["derive"] }

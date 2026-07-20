@@ -6,19 +6,21 @@ const WEBVPN_PREFIX: &str = "webvpn";
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum ServiceDomain {
     AuthServer,
+    CampusCard,
     Ehall,
 }
 
 impl ServiceDomain {
     fn scheme(self) -> &'static str {
         match self {
-            Self::AuthServer | Self::Ehall => "https",
+            Self::AuthServer | Self::CampusCard | Self::Ehall => "https",
         }
     }
 
     fn direct_host(self) -> &'static str {
         match self {
             Self::AuthServer => "authserver.csust.edu.cn",
+            Self::CampusCard => "hxyxh5.csust.edu.cn",
             Self::Ehall => "ehall.csust.edu.cn",
         }
     }
@@ -26,6 +28,7 @@ impl ServiceDomain {
     fn vpn_hex(self) -> &'static str {
         match self {
             Self::AuthServer => "b9fbab94ec37584ef499d74673ec2c940949105c7b30eca147702d9482299f99",
+            Self::CampusCard => "6a312b2d860191c92db8c011e7e418eac2691c647e6e2b00de67552d70884967",
             Self::Ehall => "1e2b5c384f0dc42e4d0db781d590f8e2f8f129ae812718586ddba3948db7b103",
         }
     }

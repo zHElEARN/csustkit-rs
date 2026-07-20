@@ -1,5 +1,6 @@
 use aes::cipher::{BlockModeEncrypt, KeyIvInit, block_padding::Pkcs7};
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
+use percent_encoding::percent_decode_str;
 use reqwest::{
     Response,
     header::{LOCATION, SET_COOKIE},
@@ -18,6 +19,7 @@ use crate::{
 type Aes128CbcEnc = cbc::Encryptor<aes::Aes128>;
 
 const LOGIN_PATH: &str = "/authserver/login?service=https%3A%2F%2Fehall.csust.edu.cn%2Flogin";
+const CAMPUS_CARD_LOGIN_PATH: &str = "/berserker-auth/cas/login/wisedu?targetUrl=https://hxyxh5.csust.edu.cn/plat/?name=loginTransit";
 const WEBVPN_ENCLIENT_URL: &str = "https://vpn.csust.edu.cn/enclient/";
 const WEBVPN_CAS_CHECK_URL: &str =
     "https://vpn.csust.edu.cn/enclient/api/users/admin/custom/page/login/sso/cas";
@@ -33,6 +35,8 @@ pub enum SsoError {
     CaptchaRetrievalFailed,
     #[error("登录失败: {0}")]
     LoginFailed(String),
+    #[error("校园卡系统登录失败: {0}")]
+    LoginToCampusCardFailed(String),
     #[error("统一身份认证未登录")]
     NotLoggedIn,
     #[error(transparent)]
@@ -217,6 +221,24 @@ impl SsoHelper {
         response.data.ok_or(SsoError::NotLoggedIn)
     }
 
+    /// 从已登录的统一身份认证会话获取校园卡登录凭据。
+    pub async fn login_to_campus_card(&self) -> Result<String, SsoError> {
+        let response = self
+            .session
+            .client
+            .get(make_url(
+                self.mode,
+                ServiceDomain::CampusCard,
+                CAMPUS_CARD_LOGIN_PATH,
+            ))
+            .send()
+            .await?;
+        let final_url = response.url();
+        let expected_prefix = make_url(self.mode, ServiceDomain::CampusCard, "/plat");
+
+        extract_campus_card_ticket(final_url, &expected_prefix)
+    }
+
     pub async fn is_logged_in(&self) -> bool {
         self.get_login_user().await.is_ok()
     }
@@ -373,4 +395,22 @@ fn login_failure_from_body(body: &str, final_url: Url) -> SsoError {
         }
     }
     SsoError::LoginFailed(format!("登录失败: {final_url}"))
+}
+
+fn extract_campus_card_ticket(final_url: &Url, expected_prefix: &str) -> Result<String, SsoError> {
+    if !final_url.as_str().starts_with(expected_prefix) {
+        return Err(SsoError::LoginToCampusCardFailed(format!(
+            "重定向URL异常: {final_url}"
+        )));
+    }
+
+    let encoded_ticket = final_url
+        .query_pairs()
+        .find_map(|(name, value)| (name == "ticket").then_some(value.into_owned()))
+        .ok_or_else(|| SsoError::LoginToCampusCardFailed("无法获取登录凭据".to_owned()))?;
+
+    percent_decode_str(&encoded_ticket)
+        .decode_utf8()
+        .map(|value| value.into_owned())
+        .map_err(|_| SsoError::LoginToCampusCardFailed("无法获取登录凭据".to_owned()))
 }
