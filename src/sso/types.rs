@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::time::SystemTimeError;
 
-use crate::edu::EducationRequestError;
+use crate::SessionRequestError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SsoError {
@@ -17,8 +17,8 @@ pub enum SsoError {
     LoginToCampusCardFailed(String),
     #[error("网络课程中心登录失败: {0}")]
     LoginToMoocFailed(String),
-    #[error("教务 SSO 请求失败: {0}")]
-    EducationRequest(#[from] EducationRequestError),
+    #[error("会话请求失败: {0}")]
+    SessionRequest(#[from] SessionRequestError),
     #[error("统一身份认证未登录")]
     NotLoggedIn,
     #[error(transparent)]

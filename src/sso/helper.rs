@@ -8,7 +8,6 @@ use url::Url;
 
 use crate::{
     connection::ConnectionMode,
-    edu::request::send_with_retry,
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
@@ -215,10 +214,15 @@ impl SsoHelper {
     /// 从已登录的统一身份认证会话登录教务系统。
     pub async fn login_to_education(&self) -> Result<(), SsoError> {
         let education_url = make_url(self.mode, ServiceDomain::Education, EDUCATION_SSO_PATH);
-        send_with_retry(|| self.session.client.get(&education_url)).await?;
+        self.session
+            .send_with_retry(|| self.session.client.get(&education_url))
+            .await?;
 
         let login_url = make_url(self.mode, ServiceDomain::AuthServer, EDUCATION_LOGIN_PATH);
-        let response = send_with_retry(|| self.session.client.get(&login_url)).await?;
+        let response = self
+            .session
+            .send_with_retry(|| self.session.client.get(&login_url))
+            .await?;
         let body = String::from_utf8_lossy(&response.body);
         if body.contains("账号登录") {
             Err(SsoError::NotLoggedIn)

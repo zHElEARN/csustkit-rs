@@ -6,8 +6,7 @@ use url::form_urlencoded;
 use crate::url_factory::{ServiceDomain, make_url};
 
 use super::super::{
-    Exam, ExamScheduleQuery, SemesterOptions, SemesterType, request::send_with_retry,
-    types::EduError,
+    Exam, ExamScheduleQuery, SemesterOptions, SemesterType, types::EduError,
 };
 use super::{EduHelper, element_text, ensure_logged_in};
 
@@ -23,7 +22,10 @@ impl EduHelper {
             ServiceDomain::Education,
             EXAM_SCHEDULE_SEMESTERS_PATH,
         );
-        let response = send_with_retry(|| self.session.client.get(&url)).await?;
+        let response = self
+            .session
+            .send_with_retry(|| self.session.client.get(&url))
+            .await?;
         let body = String::from_utf8_lossy(&response.body);
 
         ensure_logged_in(&body)?;
@@ -51,7 +53,7 @@ impl EduHelper {
         );
         form.append_pair("xnxqid", &academic_year_semester);
         let form = form.finish();
-        let response = send_with_retry(|| {
+        let response = self.session.send_with_retry(|| {
             self.session
                 .client
                 .post(&url)

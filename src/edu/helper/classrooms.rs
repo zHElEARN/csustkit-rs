@@ -5,7 +5,7 @@ use url::form_urlencoded;
 use crate::url_factory::{ServiceDomain, make_url};
 
 use super::super::{
-    AvailableClassroomsQuery, DayOfWeek, request::send_with_retry, types::EduError,
+    AvailableClassroomsQuery, DayOfWeek, types::EduError,
 };
 use super::{EduHelper, element_text, ensure_logged_in};
 
@@ -49,7 +49,7 @@ impl EduHelper {
         form.append_pair("jc1", start_section);
         form.append_pair("jc2", end_section);
         let form = form.finish();
-        let response = send_with_retry(|| {
+        let response = self.session.send_with_retry(|| {
             self.session
                 .client
                 .post(&url)

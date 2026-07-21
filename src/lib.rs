@@ -8,5 +8,5 @@ mod url_factory;
 pub mod webvpn;
 
 pub use connection::ConnectionMode;
-pub use session::CsustSession;
+pub use session::{CsustSession, SessionRequestError};
 pub use webvpn::{WebVpnError, webvpn_decrypt_url, webvpn_encrypt_url};

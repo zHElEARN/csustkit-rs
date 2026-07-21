@@ -5,7 +5,7 @@ use url::form_urlencoded;
 
 use crate::url_factory::{ServiceDomain, make_url};
 
-use super::super::{SemesterOptions, request::send_with_retry, types::EduError};
+use super::super::{SemesterOptions, types::EduError};
 use super::{EduHelper, element_text, ensure_logged_in};
 
 const SEMESTER_START_DATE_PATH: &str = "/jsxsd/jxzl/jxzl_query";
@@ -23,7 +23,7 @@ impl EduHelper {
         let mut form = form_urlencoded::Serializer::new(String::new());
         form.append_pair("xnxq01id", academic_year_semester.as_deref().unwrap_or(""));
         let form = form.finish();
-        let response = send_with_retry(|| {
+        let response = self.session.send_with_retry(|| {
             self.session
                 .client
                 .post(&url)
@@ -48,7 +48,10 @@ impl EduHelper {
             ServiceDomain::Education,
             SEMESTER_START_DATE_PATH,
         );
-        let response = send_with_retry(|| self.session.client.get(&url)).await?;
+        let response = self
+            .session
+            .send_with_retry(|| self.session.client.get(&url))
+            .await?;
         let body = String::from_utf8_lossy(&response.body);
 
         ensure_logged_in(&body)?;

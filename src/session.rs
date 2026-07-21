@@ -1,8 +1,27 @@
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::Duration,
+};
 
-use reqwest::{Client, cookie::Jar, redirect::Policy};
+use reqwest::{Client, RequestBuilder, cookie::Jar, redirect::Policy};
+use tokio::time::sleep;
+use url::Url;
 
 const USER_AGENT: &str = concat!("csustkit-rs/", env!("CARGO_PKG_VERSION"));
+const MAX_RETRIES: u8 = 5;
+const RETRY_DELAY: Duration = Duration::from_secs(1);
+
+#[derive(Debug, thiserror::Error)]
+pub enum SessionRequestError {
+    #[error("请求连续 {attempts} 次返回空响应: {url}")]
+    EmptyResponse { url: Url, attempts: u8 },
+    #[error(transparent)]
+    Network(#[from] reqwest::Error),
+}
+
+pub(crate) struct SessionResponse {
+    pub(crate) body: Vec<u8>,
+}
 
 /// Shared HTTP state for CSUST services.
 ///
@@ -33,5 +52,34 @@ impl CsustSession {
             no_redirect_client,
             cookie_jar,
         }))
+    }
+
+    pub(crate) async fn send_with_retry<F>(
+        &self,
+        build_request: F,
+    ) -> Result<SessionResponse, SessionRequestError>
+    where
+        F: Fn() -> RequestBuilder,
+    {
+        let mut retries = 0_u8;
+        loop {
+            let response = build_request().send().await?;
+            let url = response.url().clone();
+            let body = response.bytes().await?.to_vec();
+
+            if !body.is_empty() {
+                return Ok(SessionResponse { body });
+            }
+
+            if retries >= MAX_RETRIES {
+                return Err(SessionRequestError::EmptyResponse {
+                    url,
+                    attempts: retries + 1,
+                });
+            }
+
+            retries += 1;
+            sleep(RETRY_DELAY).await;
+        }
     }
 }

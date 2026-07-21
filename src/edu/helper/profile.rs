@@ -2,7 +2,7 @@ use scraper::{ElementRef, Html, Selector};
 
 use crate::url_factory::{ServiceDomain, make_url};
 
-use super::super::{Profile, request::send_with_retry, types::EduError};
+use super::super::{Profile, types::EduError};
 use super::EduHelper;
 
 const PROFILE_PATH: &str = "/jsxsd/grxx/xsxx";
@@ -10,7 +10,10 @@ const PROFILE_PATH: &str = "/jsxsd/grxx/xsxx";
 impl EduHelper {
     pub async fn get_profile(&self) -> Result<Profile, EduError> {
         let url = make_url(self.mode, ServiceDomain::Education, PROFILE_PATH);
-        let response = send_with_retry(|| self.session.client.get(&url)).await?;
+        let response = self
+            .session
+            .send_with_retry(|| self.session.client.get(&url))
+            .await?;
         let body = String::from_utf8_lossy(&response.body);
 
         if body.contains("请输入账号") {

@@ -3,14 +3,7 @@ use std::time::SystemTimeError;
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use url::Url;
-
-#[derive(Debug, thiserror::Error)]
-pub enum EducationRequestError {
-    #[error("教务请求连续 {attempts} 次返回空响应: {url}")]
-    EmptyResponse { url: Url, attempts: u8 },
-    #[error(transparent)]
-    Network(#[from] reqwest::Error),
-}
+use crate::SessionRequestError;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -335,8 +328,8 @@ pub struct GradeDetail {
 pub enum EduError {
     #[error("教务客户端创建失败: {0}")]
     ClientBuildFailed(String),
-    #[error("教务请求失败: {0}")]
-    EducationRequest(#[from] EducationRequestError),
+    #[error("会话请求失败: {0}")]
+    SessionRequest(#[from] SessionRequestError),
     #[error("个人信息获取失败: {0}")]
     ProfileRetrievalFailed(String),
     #[error("课程成绩获取失败: {0}")]
