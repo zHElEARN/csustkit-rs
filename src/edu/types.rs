@@ -74,6 +74,60 @@ pub struct SemesterOptions {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CourseSchedule {
+    pub courses: Vec<Course>,
+    pub remarks: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Course {
+    pub course_name: String,
+    pub group_name: Option<String>,
+    pub teacher: Option<String>,
+    pub sessions: Vec<ScheduleSession>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScheduleSession {
+    pub weeks: Vec<i64>,
+    pub start_section: i64,
+    pub end_section: i64,
+    pub day_of_week: DayOfWeek,
+    pub classroom: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[repr(u8)]
+pub enum DayOfWeek {
+    Sunday = 0,
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3,
+    Thursday = 4,
+    Friday = 5,
+    Saturday = 6,
+}
+
+impl DayOfWeek {
+    pub(super) const fn from_column(column: usize) -> Option<Self> {
+        match column {
+            0 => Some(Self::Sunday),
+            1 => Some(Self::Monday),
+            2 => Some(Self::Tuesday),
+            3 => Some(Self::Wednesday),
+            4 => Some(Self::Thursday),
+            5 => Some(Self::Friday),
+            6 => Some(Self::Saturday),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Exam {
     pub campus: String,
     pub session: String,
@@ -270,6 +324,10 @@ pub enum EduError {
     AvailableSemestersForExamScheduleRetrievalFailed(String),
     #[error("日期解析失败: {0}")]
     DateParsingFailed(String),
+    #[error("课程表获取失败: {0}")]
+    CourseScheduleRetrievalFailed(String),
+    #[error("课程表可选学期获取失败: {0}")]
+    AvailableSemestersForCourseScheduleRetrievalFailed(String),
     #[error("教务系统未登录")]
     NotLoggedIn,
 }

@@ -4,7 +4,7 @@ mod types;
 
 pub use helper::EduHelper;
 pub use types::{
-    CourseGrade, CourseGradeQuery, CourseNature, DisplayMode, EduError, EducationRequestError,
-    Exam, ExamScheduleQuery, GradeComponent, GradeDetail, Profile, SemesterOptions, SemesterType,
-    StudyMode,
+    Course, CourseGrade, CourseGradeQuery, CourseNature, CourseSchedule, DayOfWeek, DisplayMode,
+    EduError, EducationRequestError, Exam, ExamScheduleQuery, GradeComponent, GradeDetail, Profile,
+    ScheduleSession, SemesterOptions, SemesterType, StudyMode,
 };

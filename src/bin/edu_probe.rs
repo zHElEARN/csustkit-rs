@@ -57,7 +57,7 @@ impl std::error::Error for ProbeError {
 #[tokio::main]
 async fn main() {
     match run().await {
-        Ok(()) => println!("Direct 和 WebVPN 的教务考试与成绩查询链路均验证成功。"),
+        Ok(()) => println!("Direct 和 WebVPN 的教务课表、考试与成绩查询链路均验证成功。"),
         Err(error) => {
             println!("测试停止: {error}");
             std::process::exit(1);
@@ -120,6 +120,25 @@ async fn test_mode(mode: ConnectionMode, username: &str, password: &str) -> Resu
         .get_exam_schedule(ExamScheduleQuery::default())
         .await?;
     println!("{mode_name} 考试安排读取成功，共 {} 条。", exams.len());
+
+    let schedule_semesters = education
+        .get_available_semesters_for_course_schedule()
+        .await?;
+    println!(
+        "{mode_name} 可用课表学期读取成功，共 {} 个。",
+        schedule_semesters.semesters.len()
+    );
+    let schedule = education.get_course_schedule(None).await?;
+    let session_count = schedule
+        .courses
+        .iter()
+        .map(|course| course.sessions.len())
+        .sum::<usize>();
+    println!(
+        "{mode_name} 课程表读取成功，共 {} 门课、{session_count} 个时段、{} 个备注。",
+        schedule.courses.len(),
+        schedule.remarks.len()
+    );
 
     let semesters = education
         .get_available_semesters_for_course_grades()
