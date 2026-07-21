@@ -1,3 +1,5 @@
+use std::time::SystemTimeError;
+
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -72,6 +74,22 @@ pub struct SemesterOptions {
     pub default_semester: String,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Campus {
+    Yuntang,
+    Jinpenling,
+}
+
+impl Campus {
+    pub(super) const fn request_id(self) -> &'static str {
+        match self {
+            Self::Yuntang => "1",
+            Self::Jinpenling => "2",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CourseSchedule {
@@ -124,6 +142,15 @@ impl DayOfWeek {
             _ => None,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AvailableClassroomsQuery {
+    pub campus: Campus,
+    pub week: i64,
+    pub day_of_week: DayOfWeek,
+    pub section: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -328,6 +355,16 @@ pub enum EduError {
     CourseScheduleRetrievalFailed(String),
     #[error("课程表可选学期获取失败: {0}")]
     AvailableSemestersForCourseScheduleRetrievalFailed(String),
+    #[error("学期开始日期获取失败: {0}")]
+    SemesterStartDateRetrievalFailed(String),
+    #[error("开始日期可选学期获取失败: {0}")]
+    AvailableSemestersForStartDateRetrievalFailed(String),
+    #[error("指定校区在指定时间内空闲的教室列表获取失败: {0}")]
+    AvailableClassroomsRetrievalFailed(String),
+    #[error("教务系统登出失败: {0}")]
+    LogoutFailed(#[source] reqwest::Error),
+    #[error("获取当前时间失败: {0}")]
+    Time(#[source] SystemTimeError),
     #[error("教务系统未登录")]
     NotLoggedIn,
 }
