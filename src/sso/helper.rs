@@ -35,13 +35,7 @@ pub struct SsoHelper {
 }
 
 impl SsoHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Self, SsoError> {
-        let session =
-            CsustSession::new().map_err(|error| SsoError::ClientBuildFailed(error.to_string()))?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: CsustSession) -> Self {
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
 

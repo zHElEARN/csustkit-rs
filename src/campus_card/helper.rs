@@ -27,13 +27,7 @@ pub struct CampusCardHelper {
 }
 
 impl CampusCardHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Self, CampusCardError> {
-        let session = CsustSession::new()
-            .map_err(|error| CampusCardError::ClientBuildFailed(error.to_string()))?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: CsustSession) -> Self {
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self {
             mode,
             session,

@@ -326,8 +326,6 @@ pub struct GradeDetail {
 
 #[derive(Debug, thiserror::Error)]
 pub enum EduError {
-    #[error("教务客户端创建失败: {0}")]
-    ClientBuildFailed(String),
     #[error("会话请求失败: {0}")]
     SessionRequest(#[from] SessionRequestError),
     #[error("个人信息获取失败: {0}")]

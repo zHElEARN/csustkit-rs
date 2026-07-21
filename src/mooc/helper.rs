@@ -51,13 +51,7 @@ pub struct MoocHelper {
 }
 
 impl MoocHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Self, MoocError> {
-        let session =
-            CsustSession::new().map_err(|error| MoocError::ClientBuildFailed(error.to_string()))?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: CsustSession) -> Self {
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
 

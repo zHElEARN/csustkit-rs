@@ -45,8 +45,6 @@ pub struct Exam {
 
 #[derive(Debug, thiserror::Error)]
 pub enum MoocError {
-    #[error("网络课程中心客户端创建失败: {0}")]
-    ClientBuildFailed(String),
     #[error("获取个人信息失败: {0}")]
     ProfileRetrievalFailed(String),
     #[error("获取课程信息失败: {0}")]

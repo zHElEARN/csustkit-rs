@@ -23,13 +23,7 @@ pub struct EduHelper {
 }
 
 impl EduHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Self, EduError> {
-        let session =
-            CsustSession::new().map_err(|error| EduError::ClientBuildFailed(error.to_string()))?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: CsustSession) -> Self {
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
 

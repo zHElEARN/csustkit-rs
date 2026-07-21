@@ -5,8 +5,6 @@ use crate::SessionRequestError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SsoError {
-    #[error("SSO 客户端创建失败: {0}")]
-    ClientBuildFailed(String),
     #[error("获取登录表单失败: {0}")]
     GetLoginFormFailed(String),
     #[error("验证码获取失败")]

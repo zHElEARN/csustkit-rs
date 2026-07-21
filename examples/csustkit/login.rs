@@ -15,7 +15,7 @@ pub struct LoginContext {
 
 pub async fn run_login_demo(session: CsustSession) -> Option<LoginContext> {
     let mode = select_connection_mode()?;
-    let sso = SsoHelper::with_session(mode, session.clone());
+    let sso = SsoHelper::new(mode, session.clone());
 
     loop {
         println!("\n=== 统一认证登录 ===");
@@ -82,9 +82,9 @@ async fn login_once(sso: &SsoHelper) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn run_main_menu(login: LoginContext) {
-    let mooc_helper = MoocHelper::with_session(login.mode, login.session.clone());
-    let edu_helper = EduHelper::with_session(login.mode, login.session.clone());
-    let campus_card_helper = CampusCardHelper::with_session(login.mode, login.session.clone());
+    let mooc_helper = MoocHelper::new(login.mode, login.session.clone());
+    let edu_helper = EduHelper::new(login.mode, login.session.clone());
+    let campus_card_helper = CampusCardHelper::new(login.mode, login.session.clone());
     loop {
         println!("\n=== 主菜单 ===");
         println!("1. 网络课程中心");

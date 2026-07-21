@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CampusCardError {
-    #[error("校园卡客户端创建失败: {0}")]
-    ClientBuildFailed(String),
     #[error("个人信息获取失败: {0}")]
     ProfileRetrievalFailed(String),
     #[error("楼栋信息获取失败: {0}")]
