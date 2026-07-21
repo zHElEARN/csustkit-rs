@@ -2,7 +2,7 @@ use std::{env, sync::Arc};
 
 use csustkit::{
     ConnectionMode, CsustSession,
-    edu::{CourseGradeQuery, EduError, EduHelper},
+    edu::{CourseGradeQuery, EduError, EduHelper, ExamScheduleQuery},
     sso::{SsoError, SsoHelper},
 };
 
@@ -57,7 +57,7 @@ impl std::error::Error for ProbeError {
 #[tokio::main]
 async fn main() {
     match run().await {
-        Ok(()) => println!("Direct 和 WebVPN 的教务成绩查询链路均验证成功。"),
+        Ok(()) => println!("Direct 和 WebVPN 的教务考试与成绩查询链路均验证成功。"),
         Err(error) => {
             println!("测试停止: {error}");
             std::process::exit(1);
@@ -109,6 +109,18 @@ async fn test_mode(mode: ConnectionMode, username: &str, password: &str) -> Resu
             "{mode_name} 教务档案姓名或学号为空，继续验证成绩链路。警告：这是已有档案解析结果。"
         );
     }
+    let exam_semesters = education
+        .get_available_semesters_for_exam_schedule()
+        .await?;
+    println!(
+        "{mode_name} 可用考试学期读取成功，共 {} 个。",
+        exam_semesters.semesters.len()
+    );
+    let exams = education
+        .get_exam_schedule(ExamScheduleQuery::default())
+        .await?;
+    println!("{mode_name} 考试安排读取成功，共 {} 条。", exams.len());
+
     let semesters = education
         .get_available_semesters_for_course_grades()
         .await?;

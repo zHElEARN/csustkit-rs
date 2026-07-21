@@ -1,3 +1,4 @@
+use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -29,6 +30,63 @@ pub struct Profile {
     pub enrollment_date: String,
     pub entrance_exam_id: String,
     pub id_card_number: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExamScheduleQuery {
+    pub academic_year_semester: Option<String>,
+    pub semester_type: Option<SemesterType>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SemesterType {
+    Beginning,
+    Middle,
+    End,
+}
+
+impl SemesterType {
+    pub(super) const fn display_name(self) -> &'static str {
+        match self {
+            Self::Beginning => "期初",
+            Self::Middle => "期中",
+            Self::End => "期末",
+        }
+    }
+
+    pub(super) const fn request_id(self) -> &'static str {
+        match self {
+            Self::Beginning => "1",
+            Self::Middle => "2",
+            Self::End => "3",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SemesterOptions {
+    pub semesters: Vec<String>,
+    pub default_semester: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Exam {
+    pub campus: String,
+    pub session: String,
+    pub course_id: String,
+    pub course_name: String,
+    pub teacher: String,
+    pub exam_time: String,
+    pub exam_start_time: DateTime<FixedOffset>,
+    pub exam_end_time: DateTime<FixedOffset>,
+    pub exam_room: String,
+    pub seat_number: String,
+    pub admission_ticket_number: String,
+    pub remarks: String,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -206,6 +264,12 @@ pub enum EduError {
     AvailableSemestersForCourseGradesRetrievalFailed(String),
     #[error("成绩详情获取失败: {0}")]
     GradeDetailRetrievalFailed(String),
+    #[error("考试安排获取失败: {0}")]
+    ExamScheduleRetrievalFailed(String),
+    #[error("考试安排可选学期获取失败: {0}")]
+    AvailableSemestersForExamScheduleRetrievalFailed(String),
+    #[error("日期解析失败: {0}")]
+    DateParsingFailed(String),
     #[error("教务系统未登录")]
     NotLoggedIn,
 }
