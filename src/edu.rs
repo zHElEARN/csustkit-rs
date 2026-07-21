@@ -3,4 +3,7 @@ pub(crate) mod request;
 mod types;
 
 pub use helper::EduHelper;
-pub use types::{EduError, EducationRequestError, Profile};
+pub use types::{
+    CourseGrade, CourseGradeQuery, CourseNature, DisplayMode, EduError, EducationRequestError,
+    GradeComponent, GradeDetail, Profile, StudyMode,
+};

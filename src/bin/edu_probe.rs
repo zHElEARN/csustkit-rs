@@ -2,7 +2,7 @@ use std::{env, sync::Arc};
 
 use csustkit::{
     ConnectionMode, CsustSession,
-    edu::{EduError, EduHelper},
+    edu::{CourseGradeQuery, EduError, EduHelper},
     sso::{SsoError, SsoHelper},
 };
 
@@ -10,6 +10,7 @@ use csustkit::{
 enum ProbeError {
     MissingCredentials,
     CaptchaRequired(&'static str),
+    Validation(String),
     Session(reqwest::Error),
     Sso(SsoError),
     Education(EduError),
@@ -34,6 +35,7 @@ impl std::fmt::Display for ProbeError {
             Self::CaptchaRequired(mode) => {
                 write!(formatter, "{mode} 登录需要验证码，按要求停止测试")
             }
+            Self::Validation(message) => write!(formatter, "探测校验失败: {message}"),
             Self::Session(error) => write!(formatter, "共享会话创建失败: {error}"),
             Self::Sso(error) => write!(formatter, "SSO 操作失败: {error}"),
             Self::Education(error) => write!(formatter, "教务操作失败: {error}"),
@@ -55,7 +57,7 @@ impl std::error::Error for ProbeError {
 #[tokio::main]
 async fn main() {
     match run().await {
-        Ok(()) => println!("Direct 和 WebVPN 的教务 SSO 与个人档案链路均验证成功。"),
+        Ok(()) => println!("Direct 和 WebVPN 的教务成绩查询链路均验证成功。"),
         Err(error) => {
             println!("测试停止: {error}");
             std::process::exit(1);
@@ -103,11 +105,38 @@ async fn test_mode(mode: ConnectionMode, username: &str, password: &str) -> Resu
     }
     let profile = education.get_profile().await?;
     if profile.name.is_empty() || profile.student_id.is_empty() {
-        return Err(ProbeError::Education(EduError::ProfileRetrievalFailed(
-            "个人信息中的姓名或学号为空".to_owned(),
+        println!(
+            "{mode_name} 教务档案姓名或学号为空，继续验证成绩链路。警告：这是已有档案解析结果。"
+        );
+    }
+    let semesters = education
+        .get_available_semesters_for_course_grades()
+        .await?;
+    if semesters.is_empty() {
+        return Err(ProbeError::Validation(format!(
+            "{mode_name} 未返回可用成绩学期"
         )));
     }
-    println!("{mode_name} 教务档案读取成功。");
+    println!(
+        "{mode_name} 可用成绩学期读取成功，共 {} 个。",
+        semesters.len()
+    );
+
+    let grades = education
+        .get_course_grades(CourseGradeQuery::default())
+        .await?;
+    let first_grade = grades.first().ok_or_else(|| {
+        ProbeError::Validation(format!("{mode_name} 默认成绩查询未返回记录，无法验证详情"))
+    })?;
+    println!("{mode_name} 课程成绩读取成功，共 {} 条。", grades.len());
+
+    let detail = education
+        .get_grade_detail(&first_grade.grade_detail_url)
+        .await?;
+    println!(
+        "{mode_name} 成绩详情读取成功，包含 {} 个组成项。",
+        detail.components.len()
+    );
 
     sso.logout().await?;
     Ok(())
