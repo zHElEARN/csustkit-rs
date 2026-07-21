@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::{FixedOffset, NaiveDateTime, TimeZone};
 use encoding_rs::GBK;
 use scraper::{ElementRef, Html, Selector};
@@ -49,18 +47,18 @@ struct AssignmentResponse {
 
 pub struct MoocHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
 }
 
 impl MoocHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, MoocError> {
+    pub fn new(mode: ConnectionMode) -> Result<Self, MoocError> {
         let session =
             CsustSession::new().map_err(|error| MoocError::ClientBuildFailed(error.to_string()))?;
         Ok(Self::with_session(mode, session))
     }
 
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self { mode, session })
+    pub fn with_session(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self { mode, session }
     }
 
     pub async fn get_profile(&self) -> Result<Profile, MoocError> {

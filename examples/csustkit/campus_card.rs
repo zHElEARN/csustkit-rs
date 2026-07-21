@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use csustkit::{
     campus_card::{Campus, CampusCardHelper},
     sso::SsoHelper,
@@ -7,7 +5,7 @@ use csustkit::{
 
 use super::console;
 
-pub async fn run_menu(helper: Arc<CampusCardHelper>, sso: Arc<SsoHelper>) {
+pub async fn run_menu(helper: &CampusCardHelper, sso: &SsoHelper) {
     let ticket = match sso.login_to_campus_card().await {
         Ok(ticket) => ticket,
         Err(error) => {
@@ -39,7 +37,7 @@ pub async fn run_menu(helper: Arc<CampusCardHelper>, sso: Arc<SsoHelper>) {
                 Err(error) => println!("操作失败: {error}"),
             },
             "2" => {
-                if let Err(error) = query_electricity(&helper).await {
+                if let Err(error) = query_electricity(helper).await {
                     println!("操作失败: {error}");
                 }
             }

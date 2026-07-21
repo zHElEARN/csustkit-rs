@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use csustkit::{
     edu::{
         AvailableClassroomsQuery, Campus, CourseGradeQuery, DayOfWeek, EduError, EduHelper,
@@ -10,7 +8,7 @@ use csustkit::{
 
 use super::{console, formatting};
 
-pub async fn run_menu(helper: Arc<EduHelper>, sso: Arc<SsoHelper>) {
+pub async fn run_menu(helper: &EduHelper, sso: &SsoHelper) {
     if let Err(error) = sso.login_to_education().await {
         println!("进入教务系统失败: {error}");
         return;
@@ -28,12 +26,12 @@ pub async fn run_menu(helper: Arc<EduHelper>, sso: Arc<SsoHelper>) {
             return;
         };
         let result = match choice.as_str() {
-            "1" => profile(&helper).await,
-            "2" => exams(&helper).await,
-            "3" => grades(&helper).await,
-            "4" => schedule(&helper).await,
-            "5" => classrooms(&helper).await,
-            "6" => semester_start_date(&helper).await,
+            "1" => profile(helper).await,
+            "2" => exams(helper).await,
+            "3" => grades(helper).await,
+            "4" => schedule(helper).await,
+            "5" => classrooms(helper).await,
+            "6" => semester_start_date(helper).await,
             "0" => return,
             _ => {
                 println!("输入无效，请重新选择。");

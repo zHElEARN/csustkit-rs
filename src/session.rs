@@ -26,7 +26,9 @@ pub(crate) struct SessionResponse {
 /// Shared HTTP state for CSUST services.
 ///
 /// The two clients use the same cookie jar: one follows redirects for normal
-/// requests, while the other lets SSO inspect each redirect explicitly.
+/// requests, while the other lets SSO inspect each redirect explicitly. Clones
+/// share the same cookie jar and therefore the same login state.
+#[derive(Clone)]
 pub struct CsustSession {
     pub(crate) client: Client,
     pub(crate) no_redirect_client: Client,
@@ -34,7 +36,7 @@ pub struct CsustSession {
 }
 
 impl CsustSession {
-    pub fn new() -> Result<Arc<Self>, reqwest::Error> {
+    pub fn new() -> Result<Self, reqwest::Error> {
         let cookie_jar = Arc::new(Jar::default());
         let client = Client::builder()
             .cookie_provider(Arc::clone(&cookie_jar))
@@ -47,11 +49,11 @@ impl CsustSession {
             .user_agent(USER_AGENT)
             .build()?;
 
-        Ok(Arc::new(Self {
+        Ok(Self {
             client,
             no_redirect_client,
             cookie_jar,
-        }))
+        })
     }
 
     pub(crate) async fn send_with_retry<F>(

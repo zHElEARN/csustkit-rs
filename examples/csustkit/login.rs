@@ -1,4 +1,4 @@
-use std::{env, fs, sync::Arc};
+use std::{env, fs};
 
 use csustkit::{
     ConnectionMode, CsustSession, campus_card::CampusCardHelper, edu::EduHelper, mooc::MoocHelper,
@@ -9,13 +9,13 @@ use super::{campus_card, console, edu, mooc};
 
 pub struct LoginContext {
     pub mode: ConnectionMode,
-    pub session: Arc<CsustSession>,
-    pub sso: Arc<SsoHelper>,
+    pub session: CsustSession,
+    pub sso: SsoHelper,
 }
 
-pub async fn run_login_demo(session: Arc<CsustSession>) -> Option<LoginContext> {
+pub async fn run_login_demo(session: CsustSession) -> Option<LoginContext> {
     let mode = select_connection_mode()?;
-    let sso = SsoHelper::with_session(mode, Arc::clone(&session));
+    let sso = SsoHelper::with_session(mode, session.clone());
 
     loop {
         println!("\n=== 统一认证登录 ===");
@@ -82,9 +82,9 @@ async fn login_once(sso: &SsoHelper) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 pub async fn run_main_menu(login: LoginContext) {
-    let mooc_helper = MoocHelper::with_session(login.mode, Arc::clone(&login.session));
-    let edu_helper = EduHelper::with_session(login.mode, Arc::clone(&login.session));
-    let campus_card_helper = CampusCardHelper::with_session(login.mode, Arc::clone(&login.session));
+    let mooc_helper = MoocHelper::with_session(login.mode, login.session.clone());
+    let edu_helper = EduHelper::with_session(login.mode, login.session.clone());
+    let campus_card_helper = CampusCardHelper::with_session(login.mode, login.session.clone());
     loop {
         println!("\n=== 主菜单 ===");
         println!("1. 网络课程中心");
@@ -95,11 +95,9 @@ pub async fn run_main_menu(login: LoginContext) {
             return;
         };
         match choice.as_str() {
-            "1" => mooc::run_menu(Arc::clone(&mooc_helper), Arc::clone(&login.sso)).await,
-            "2" => edu::run_menu(Arc::clone(&edu_helper), Arc::clone(&login.sso)).await,
-            "3" => {
-                campus_card::run_menu(Arc::clone(&campus_card_helper), Arc::clone(&login.sso)).await
-            }
+            "1" => mooc::run_menu(&mooc_helper, &login.sso).await,
+            "2" => edu::run_menu(&edu_helper, &login.sso).await,
+            "3" => campus_card::run_menu(&campus_card_helper, &login.sso).await,
             "0" => return,
             _ => println!("输入无效，请重新选择。"),
         }

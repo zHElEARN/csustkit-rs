@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use scraper::ElementRef;
 
@@ -22,18 +19,18 @@ mod semester;
 
 pub struct EduHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
 }
 
 impl EduHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, EduError> {
+    pub fn new(mode: ConnectionMode) -> Result<Self, EduError> {
         let session =
             CsustSession::new().map_err(|error| EduError::ClientBuildFailed(error.to_string()))?;
         Ok(Self::with_session(mode, session))
     }
 
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self { mode, session })
+    pub fn with_session(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self { mode, session }
     }
 
     pub async fn is_logged_in(&self) -> bool {

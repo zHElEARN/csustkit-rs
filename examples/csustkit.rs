@@ -13,8 +13,6 @@ mod mooc;
 #[path = "csustkit/webvpn.rs"]
 mod webvpn;
 
-use std::sync::Arc;
-
 use csustkit::CsustSession;
 
 #[tokio::main]
@@ -38,7 +36,7 @@ async fn main() {
         match console::prompt("请选择") {
             Some(choice) => match choice.as_str() {
                 "1" => {
-                    if let Some(login) = login::run_login_demo(Arc::clone(&session)).await {
+                    if let Some(login) = login::run_login_demo(session.clone()).await {
                         login::run_main_menu(login).await;
                     }
                 }

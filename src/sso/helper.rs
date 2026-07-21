@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use reqwest::{
     Response,
     header::{LOCATION, SET_COOKIE},
@@ -33,18 +31,18 @@ const WEBVPN_CAS_CHECK_URL: &str =
 
 pub struct SsoHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
 }
 
 impl SsoHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, SsoError> {
+    pub fn new(mode: ConnectionMode) -> Result<Self, SsoError> {
         let session =
             CsustSession::new().map_err(|error| SsoError::ClientBuildFailed(error.to_string()))?;
         Ok(Self::with_session(mode, session))
     }
 
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self { mode, session })
+    pub fn with_session(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self { mode, session }
     }
 
     pub async fn get_login_form(&self) -> Result<SsoLoginForm, SsoError> {
