@@ -2,11 +2,12 @@ use reqwest::header::CONTENT_TYPE;
 use scraper::{Html, Selector};
 use url::form_urlencoded;
 
-use crate::url_factory::{ServiceDomain, make_url};
-
-use super::super::{
-    AvailableClassroomsQuery, DayOfWeek, request::send_with_retry, types::EduError,
+use crate::{
+    Campus, DayOfWeek,
+    url_factory::{ServiceDomain, make_url},
 };
+
+use super::super::{AvailableClassroomsQuery, request::send_with_retry, types::EduError};
 use super::{EduHelper, element_text, ensure_logged_in};
 
 const AVAILABLE_CLASSROOMS_PATH: &str = "/jsxsd/kbcx/kbxx_classroom_ifr";
@@ -29,6 +30,10 @@ impl EduHelper {
             day => day as u8,
         }
         .to_string();
+        let campus_id = match query.campus {
+            Campus::Yuntang => "1",
+            Campus::Jinpenling => "2",
+        };
         let week = query.week.to_string();
         let url = make_url(
             self.mode,
@@ -37,7 +42,7 @@ impl EduHelper {
         );
         let mut form = form_urlencoded::Serializer::new(String::new());
         form.append_pair("skyx", "");
-        form.append_pair("xqid", query.campus.request_id());
+        form.append_pair("xqid", campus_id);
         form.append_pair("jzwid", "");
         form.append_pair("gnq", "");
         form.append_pair("skjsid", "");

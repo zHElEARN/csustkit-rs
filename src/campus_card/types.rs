@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::Campus;
+
 #[derive(Debug, thiserror::Error)]
 pub enum CampusCardError {
     #[error("校园卡客户端创建失败: {0}")]
@@ -16,39 +18,6 @@ pub enum CampusCardError {
     NotLoggedIn,
     #[error(transparent)]
     Network(#[from] reqwest::Error),
-}
-
-/// 校区。
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Campus {
-    Yuntang,
-    Jinpenling,
-}
-
-impl Campus {
-    pub const ALL: [Self; 2] = [Self::Yuntang, Self::Jinpenling];
-
-    pub const fn display_name(self) -> &'static str {
-        match self {
-            Self::Yuntang => "云塘校区",
-            Self::Jinpenling => "金盆岭校区",
-        }
-    }
-
-    pub(super) const fn fee_item_id(self) -> &'static str {
-        match self {
-            Self::Yuntang => "448",
-            Self::Jinpenling => "468",
-        }
-    }
-
-    pub(super) const fn campus_id(self) -> &'static str {
-        match self {
-            Self::Yuntang => "1",
-            Self::Jinpenling => "22",
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]

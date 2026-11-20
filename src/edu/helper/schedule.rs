@@ -4,15 +4,27 @@ use reqwest::header::CONTENT_TYPE;
 use scraper::{ElementRef, Html, Selector, node::Node};
 use url::form_urlencoded;
 
-use crate::url_factory::{ServiceDomain, make_url};
+use crate::{
+    DayOfWeek,
+    url_factory::{ServiceDomain, make_url},
+};
 
 use super::super::{
-    Course, CourseSchedule, DayOfWeek, ScheduleSession, SemesterOptions, request::send_with_retry,
+    Course, CourseSchedule, ScheduleSession, SemesterOptions, request::send_with_retry,
     types::EduError,
 };
 use super::{EduHelper, element_text, ensure_logged_in};
 
 const COURSE_SCHEDULE_PATH: &str = "/jsxsd/xskb/xskb_list.do";
+const COURSE_SCHEDULE_WEEKDAYS: [DayOfWeek; 7] = [
+    DayOfWeek::Sunday,
+    DayOfWeek::Monday,
+    DayOfWeek::Tuesday,
+    DayOfWeek::Wednesday,
+    DayOfWeek::Thursday,
+    DayOfWeek::Friday,
+    DayOfWeek::Saturday,
+];
 
 impl EduHelper {
     pub async fn get_available_semesters_for_course_schedule(
@@ -137,7 +149,9 @@ fn parse_course_schedule(body: &str) -> Result<CourseSchedule, EduError> {
             continue;
         }
         for (column_index, cell) in row.select(&cell_selector).enumerate() {
-            let day_of_week = DayOfWeek::from_column(column_index)
+            let day_of_week = COURSE_SCHEDULE_WEEKDAYS
+                .get(column_index)
+                .copied()
                 .ok_or_else(|| schedule_error(format!("星期索引无效: {column_index}")))?;
             for item in parse_schedule_cell(cell)? {
                 let session = ScheduleSession {

@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use serde::de::DeserializeOwned;
 
 use crate::{
+    Campus,
     connection::ConnectionMode,
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
@@ -13,7 +14,7 @@ use super::{
         BaseQueryResponse, BaseResponse, QueryItem, RoomPowerInfo, TokenResponse,
         profile_from_response, remaining_electricity,
     },
-    types::{Building, Campus, CampusCardError, Profile, Room},
+    types::{Building, CampusCardError, Profile, Room},
 };
 
 const TOKEN_AUTHORIZATION: &str =
@@ -108,11 +109,12 @@ impl CampusCardHelper {
 
     pub async fn get_buildings(&self, campus: Campus) -> Result<Vec<Building>, CampusCardError> {
         let token = self.required_token()?;
+        let (fee_item_id, campus_id) = electricity_campus_ids(campus);
         let parameters = [
-            ("feeitemid", campus.fee_item_id()),
+            ("feeitemid", fee_item_id),
             ("type", "select"),
             ("level", "1"),
-            ("xiaoqu_id", campus.campus_id()),
+            ("xiaoqu_id", campus_id),
         ];
         let response = self
             .get_third_data::<Vec<QueryItem>>(&token, &parameters)
@@ -141,11 +143,12 @@ impl CampusCardHelper {
 
     pub async fn get_rooms(&self, building: &Building) -> Result<Vec<Room>, CampusCardError> {
         let token = self.required_token()?;
+        let (fee_item_id, campus_id) = electricity_campus_ids(building.campus);
         let parameters = [
-            ("feeitemid", building.campus.fee_item_id()),
+            ("feeitemid", fee_item_id),
             ("type", "select"),
             ("level", "2"),
-            ("xiaoqu_id", building.campus.campus_id()),
+            ("xiaoqu_id", campus_id),
             ("loudong_id", building.id.as_str()),
         ];
         let response = self
@@ -175,11 +178,12 @@ impl CampusCardHelper {
 
     pub async fn get_electricity(&self, room: &Room) -> Result<f64, CampusCardError> {
         let token = self.required_token()?;
+        let (fee_item_id, campus_id) = electricity_campus_ids(room.building.campus);
         let parameters = [
-            ("feeitemid", room.building.campus.fee_item_id()),
+            ("feeitemid", fee_item_id),
             ("type", "IEC"),
             ("level", "3"),
-            ("xiaoqu_id", room.building.campus.campus_id()),
+            ("xiaoqu_id", campus_id),
             ("loudong_id", room.building.id.as_str()),
             ("room_id", room.id.as_str()),
         ];
@@ -250,5 +254,12 @@ impl CampusCardHelper {
             .await?;
 
         Ok(response)
+    }
+}
+
+fn electricity_campus_ids(campus: Campus) -> (&'static str, &'static str) {
+    match campus {
+        Campus::Yuntang => ("448", "1"),
+        Campus::Jinpenling => ("468", "22"),
     }
 }

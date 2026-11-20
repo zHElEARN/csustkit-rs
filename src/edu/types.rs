@@ -4,6 +4,8 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use crate::{Campus, DayOfWeek};
+
 #[derive(Debug, thiserror::Error)]
 pub enum EducationRequestError {
     #[error("教务请求连续 {attempts} 次返回空响应: {url}")]
@@ -74,22 +76,6 @@ pub struct SemesterOptions {
     pub default_semester: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Campus {
-    Yuntang,
-    Jinpenling,
-}
-
-impl Campus {
-    pub(super) const fn request_id(self) -> &'static str {
-        match self {
-            Self::Yuntang => "1",
-            Self::Jinpenling => "2",
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CourseSchedule {
@@ -114,34 +100,6 @@ pub struct ScheduleSession {
     pub end_section: i64,
     pub day_of_week: DayOfWeek,
     pub classroom: Option<String>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[repr(u8)]
-pub enum DayOfWeek {
-    Sunday = 0,
-    Monday = 1,
-    Tuesday = 2,
-    Wednesday = 3,
-    Thursday = 4,
-    Friday = 5,
-    Saturday = 6,
-}
-
-impl DayOfWeek {
-    pub(super) const fn from_column(column: usize) -> Option<Self> {
-        match column {
-            0 => Some(Self::Sunday),
-            1 => Some(Self::Monday),
-            2 => Some(Self::Tuesday),
-            3 => Some(Self::Wednesday),
-            4 => Some(Self::Thursday),
-            5 => Some(Self::Friday),
-            6 => Some(Self::Saturday),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
