@@ -1,3 +1,4 @@
+use std::ops::RangeInclusive;
 use std::time::SystemTimeError;
 
 use chrono::{DateTime, FixedOffset};
@@ -102,13 +103,34 @@ pub struct ScheduleSession {
     pub classroom: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// 教室课表查询。范围均包含首尾。
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AvailableClassroomsQuery {
-    pub campus: Campus,
-    pub week: i64,
+pub struct ClassroomScheduleQuery {
+    /// 省略时查询所有校区。
+    pub campus: Option<Campus>,
+    /// 省略时使用教务系统的当前学期。
+    pub academic_year_semester: Option<String>,
+    /// 省略时查询整学期。
+    pub weeks: Option<RangeInclusive<i64>>,
+    /// 周一为 1，周日为 7。省略时查询一周七天。
+    pub weekdays: Option<RangeInclusive<i64>>,
+    /// 按课表格的起始小节筛选。省略时查询所有节次。
+    pub sections: Option<RangeInclusive<i64>>,
+}
+
+/// 教室课表中一个课程块对应的排课记录。
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassroomScheduleSession {
+    pub classroom: String,
     pub day_of_week: DayOfWeek,
-    pub section: i64,
+    pub start_section: i64,
+    pub end_section: i64,
+    /// 排课周次，按升序排列。
+    pub weeks: Vec<i64>,
+    /// 页面显示的课程标签，可能同时包含课名和教师信息。
+    pub course_label: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -317,8 +339,8 @@ pub enum EduError {
     SemesterStartDateRetrievalFailed(String),
     #[error("开始日期可选学期获取失败: {0}")]
     AvailableSemestersForStartDateRetrievalFailed(String),
-    #[error("指定校区在指定时间内空闲的教室列表获取失败: {0}")]
-    AvailableClassroomsRetrievalFailed(String),
+    #[error("教室课表获取失败: {0}")]
+    ClassroomScheduleRetrievalFailed(String),
     #[error("教务系统登出失败: {0}")]
     LogoutFailed(#[source] reqwest::Error),
     #[error("获取当前时间失败: {0}")]

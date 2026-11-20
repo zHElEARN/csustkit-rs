@@ -257,10 +257,20 @@ fn parse_schedule_cell(element: ElementRef<'_>) -> Result<Vec<ParsedScheduleItem
 }
 
 #[derive(Clone, Copy)]
-enum ScheduleWeekType {
+pub(super) enum ScheduleWeekType {
     Single,
     Double,
     All,
+}
+
+impl ScheduleWeekType {
+    pub(super) fn includes(self, week: i64) -> bool {
+        match self {
+            Self::Single => week % 2 != 0,
+            Self::Double => week % 2 == 0,
+            Self::All => true,
+        }
+    }
 }
 
 fn parse_schedule_date(value: &str) -> Result<(Vec<i64>, Vec<i64>), EduError> {
@@ -277,11 +287,23 @@ fn parse_schedule_date(value: &str) -> Result<(Vec<i64>, Vec<i64>), EduError> {
     if parts.len() != 2 {
         return Err(schedule_error(format!("日期格式无效: {value}")));
     }
-    let week_part = parts[0];
+    let weeks = parse_schedule_weeks(parts[0], week_type)?;
     let section_part = parts[1].trim_matches(|character| matches!(character, '[' | ']' | '节'));
-    let mut weeks = Vec::new();
     let mut sections = Vec::new();
+    for section in section_part.split('-') {
+        let section = section
+            .parse::<i64>()
+            .map_err(|_| schedule_error(format!("节次格式无效: {section}")))?;
+        sections.push(section);
+    }
+    Ok((weeks, sections))
+}
 
+pub(super) fn parse_schedule_weeks(
+    week_part: &str,
+    week_type: ScheduleWeekType,
+) -> Result<Vec<i64>, EduError> {
+    let mut weeks = Vec::new();
     for week_section in week_part.split(',') {
         if week_section.contains('-') {
             let range_parts = week_section.split('-').collect::<Vec<_>>();
@@ -301,11 +323,7 @@ fn parse_schedule_date(value: &str) -> Result<(Vec<i64>, Vec<i64>), EduError> {
                     "起始周 {start_week} 大于结束周 {end_week}"
                 )));
             }
-            weeks.extend((start_week..=end_week).filter(|week| match week_type {
-                ScheduleWeekType::Single => week % 2 != 0,
-                ScheduleWeekType::Double => week % 2 == 0,
-                ScheduleWeekType::All => true,
-            }));
+            weeks.extend((start_week..=end_week).filter(|week| week_type.includes(*week)));
         } else {
             let week = week_section
                 .parse::<i64>()
@@ -313,13 +331,7 @@ fn parse_schedule_date(value: &str) -> Result<(Vec<i64>, Vec<i64>), EduError> {
             weeks.push(week);
         }
     }
-    for section in section_part.split('-') {
-        let section = section
-            .parse::<i64>()
-            .map_err(|_| schedule_error(format!("节次格式无效: {section}")))?;
-        sections.push(section);
-    }
-    Ok((weeks, sections))
+    Ok(weeks)
 }
 
 fn direct_text_nodes(element: ElementRef<'_>) -> Vec<String> {

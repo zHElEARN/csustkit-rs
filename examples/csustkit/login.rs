@@ -22,7 +22,7 @@ pub async fn run_login_demo(session: Arc<CsustSession>) -> Option<LoginContext> 
         let result = login_once(&sso).await;
         match result {
             Ok(()) => {
-                match sso.get_login_user().await {
+                match sso.get_profile().await {
                     Ok(user) => {
                         println!("\n登录成功");
                         println!("姓名: {}", user.user_name);

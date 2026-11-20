@@ -1,6 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use csustkit::{
-    edu::{Course, CourseGrade, Exam, ScheduleSession},
+    edu::{ClassroomScheduleSession, Course, CourseGrade, Exam},
     mooc::{Assignment, Course as MoocCourse, Exam as MoocExam},
 };
 
@@ -138,32 +138,28 @@ pub fn print_course_schedule(courses: &[Course]) {
                 display_day(session.day_of_week as u8),
                 session.start_section,
                 session.end_section,
-                display_weeks(&session)
+                display_weeks(&session.weeks)
             );
         }
     }
 }
 
-pub fn print_available_classrooms(
-    classrooms: &[String],
-    campus: &str,
-    week: i64,
-    day: u8,
-    section: i64,
-) {
-    if classrooms.is_empty() {
-        println!(
-            "{campus} 第{week}周 {} 第{section}大节暂无空闲教室。",
-            display_day(day)
-        );
+pub fn print_classroom_schedule(schedule: &[ClassroomScheduleSession], campus: &str) {
+    if schedule.is_empty() {
+        println!("{campus}在所选时段暂无排课记录。");
         return;
     }
-    println!(
-        "\n{campus} 第{week}周 {} 第{section}大节空闲教室:",
-        display_day(day)
-    );
-    for (index, classroom) in classrooms.iter().enumerate() {
-        println!("{}. {classroom}", index + 1);
+    println!("\n{campus}教室课表:");
+    for session in schedule {
+        println!(
+            "{} | {} 第{}-{}节 | 周次: {} | {}",
+            session.classroom,
+            display_day(session.day_of_week as u8),
+            session.start_section,
+            session.end_section,
+            display_weeks(&session.weeks),
+            session.course_label,
+        );
     }
 }
 
@@ -171,9 +167,8 @@ pub fn display_date(date: DateTime<FixedOffset>) -> String {
     date.format("%Y-%m-%d %H:%M").to_string()
 }
 
-fn display_weeks(session: &ScheduleSession) -> String {
-    session
-        .weeks
+fn display_weeks(weeks: &[i64]) -> String {
+    weeks
         .iter()
         .map(ToString::to_string)
         .collect::<Vec<_>>()

@@ -13,6 +13,8 @@ pub enum SsoError {
     CaptchaRetrievalFailed,
     #[error("登录失败: {0}")]
     LoginFailed(String),
+    #[error("账号信息待完善，请前往网页端完善信息")]
+    NeedImproveUserInfo,
     #[error("校园卡系统登录失败: {0}")]
     LoginToCampusCardFailed(String),
     #[error("网络课程中心登录失败: {0}")]

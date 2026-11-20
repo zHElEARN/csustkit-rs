@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use csustkit::{
     edu::{
-        AvailableClassroomsQuery, Campus, CourseGradeQuery, DayOfWeek, EduError, EduHelper,
-        ExamScheduleQuery, SemesterOptions,
+        Campus, ClassroomScheduleQuery, CourseGradeQuery, EduError, EduHelper, ExamScheduleQuery,
+        SemesterOptions,
     },
     sso::SsoHelper,
 };
@@ -21,7 +21,7 @@ pub async fn run_menu(helper: Arc<EduHelper>, sso: Arc<SsoHelper>) {
         println!("2. 查看考试安排");
         println!("3. 查看课程成绩");
         println!("4. 查看课程表");
-        println!("5. 查看空闲教室");
+        println!("5. 查看教室课表");
         println!("6. 查看学期首日");
         println!("0. 返回上一级");
         let Some(choice) = console::prompt("请选择") else {
@@ -142,30 +142,17 @@ async fn classrooms(helper: &EduHelper) -> Result<(), EduError> {
     let Some(section) = console::prompt_int("请输入大节（1-5）", 1, 5) else {
         return Ok(());
     };
-    let day_of_week = match day {
-        1 => DayOfWeek::Monday,
-        2 => DayOfWeek::Tuesday,
-        3 => DayOfWeek::Wednesday,
-        4 => DayOfWeek::Thursday,
-        5 => DayOfWeek::Friday,
-        6 => DayOfWeek::Saturday,
-        _ => DayOfWeek::Sunday,
-    };
-    let classrooms = helper
-        .get_available_classrooms(AvailableClassroomsQuery {
-            campus,
-            week,
-            day_of_week,
-            section,
+    let first_section = section * 2 - 1;
+    let schedule = helper
+        .get_classroom_schedule(ClassroomScheduleQuery {
+            campus: Some(campus),
+            weeks: Some(week..=week),
+            weekdays: Some(day..=day),
+            sections: Some(first_section..=first_section + 1),
+            ..ClassroomScheduleQuery::default()
         })
         .await?;
-    formatting::print_available_classrooms(
-        &classrooms,
-        campus_name(campus),
-        week,
-        day as u8,
-        section,
-    );
+    formatting::print_classroom_schedule(&schedule, campus.display_name());
     Ok(())
 }
 
@@ -186,11 +173,4 @@ fn choose_semester(options: &SemesterOptions) -> Result<Option<String>, EduError
     }
     println!("默认学期: {}", options.default_semester);
     Ok(console::select("请选择学期", &options.semesters, Clone::clone).cloned())
-}
-
-fn campus_name(campus: Campus) -> &'static str {
-    match campus {
-        Campus::Yuntang => "云塘校区",
-        Campus::Jinpenling => "金盆岭校区",
-    }
 }

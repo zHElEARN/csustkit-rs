@@ -20,7 +20,7 @@ pub(super) fn parse_login_form(body: &str) -> Result<SsoLoginForm, SsoError> {
     let document = Html::parse_document(body);
     let salt_selector = Selector::parse("input#pwdEncryptSalt")
         .map_err(|_| SsoError::GetLoginFormFailed("未找到pwdEncryptSalt输入框".to_owned()))?;
-    let execution_selector = Selector::parse("input#execution")
+    let execution_selector = Selector::parse("input#execution, input[name=execution]")
         .map_err(|_| SsoError::GetLoginFormFailed("未找到execution输入框".to_owned()))?;
 
     let pwd_encrypt_salt = document
@@ -40,6 +40,15 @@ pub(super) fn parse_login_form(body: &str) -> Result<SsoLoginForm, SsoError> {
         pwd_encrypt_salt,
         execution,
     })
+}
+
+pub(super) fn check_need_improve_user_info(body: &str, final_url: &Url) -> Result<(), SsoError> {
+    if body.contains("<title>完善资料</title>") || final_url.as_str().contains("improveUserInfo")
+    {
+        Err(SsoError::NeedImproveUserInfo)
+    } else {
+        Ok(())
+    }
 }
 
 pub(super) fn login_failure_from_body(body: &str, final_url: Url) -> SsoError {

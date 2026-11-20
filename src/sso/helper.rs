@@ -18,8 +18,8 @@ use crate::{
 use super::{
     crypto::encrypt_password,
     protocol::{
-        CheckNeedCaptchaResponse, LoginUserResponse, extract_campus_card_ticket,
-        login_failure_from_body, parse_login_form,
+        CheckNeedCaptchaResponse, LoginUserResponse, check_need_improve_user_info,
+        extract_campus_card_ticket, login_failure_from_body, parse_login_form,
     },
     types::{SsoError, SsoLoginForm, SsoProfile},
 };
@@ -67,6 +67,7 @@ impl SsoHelper {
             .text()
             .await
             .map_err(|_| SsoError::GetLoginFormFailed("无响应数据".to_owned()))?;
+        check_need_improve_user_info(&body, &final_url)?;
         parse_login_form(&body)
     }
 
@@ -139,6 +140,7 @@ impl SsoHelper {
 
         let final_url = response.url().clone();
         let body = response.text().await.unwrap_or_default();
+        check_need_improve_user_info(&body, &final_url)?;
 
         let mut check_url = final_url.clone();
         if self.mode == ConnectionMode::WebVpn {
@@ -159,7 +161,8 @@ impl SsoHelper {
         }
     }
 
-    pub async fn get_login_user(&self) -> Result<SsoProfile, SsoError> {
+    /// 获取当前统一身份认证会话的用户资料。
+    pub async fn get_profile(&self) -> Result<SsoProfile, SsoError> {
         let url = make_url(self.mode, ServiceDomain::Ehall, "/getLoginUser");
         let response =
             perform_request(self.session.client.get(url), Some(self.login_check())).await?;
@@ -220,7 +223,7 @@ impl SsoHelper {
     }
 
     pub async fn is_logged_in(&self) -> bool {
-        self.get_login_user().await.is_ok()
+        self.get_profile().await.is_ok()
     }
 
     pub async fn logout(&self) -> Result<(), SsoError> {
