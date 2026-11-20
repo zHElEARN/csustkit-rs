@@ -19,6 +19,8 @@ pub enum SsoError {
     LoginToCampusCardFailed(String),
     #[error("网络课程中心登录失败: {0}")]
     LoginToMoocFailed(String),
+    #[error("超星学习通登录失败: {0}")]
+    LoginToChaoxingFailed(String),
     #[error("教务 SSO 请求失败: {0}")]
     EducationRequest(#[from] EducationRequestError),
     #[error("统一身份认证未登录")]

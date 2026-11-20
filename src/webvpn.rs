@@ -4,7 +4,7 @@ use url::Url;
 type Aes128CbcEnc = cbc::Encryptor<aes::Aes128>;
 type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
 
-const WEBVPN_HOST: &str = "vpn.csust.edu.cn";
+pub(crate) const WEBVPN_HOST: &str = "vpn.csust.edu.cn";
 const WEBVPN_KEY: &[u8; 16] = b"CASB2021EnLink!!";
 const WEBVPN_IV: &[u8; 16] = b"CASB2021EnLink!!";
 const WEBVPN_PREFIX: &str = "webvpn";

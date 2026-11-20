@@ -27,6 +27,8 @@ use super::{
 const LOGIN_PATH: &str = "/authserver/login?service=https%3A%2F%2Fehall.csust.edu.cn%2Flogin";
 const CAMPUS_CARD_LOGIN_PATH: &str = "/berserker-auth/cas/login/wisedu?targetUrl=https://hxyxh5.csust.edu.cn/plat/?name=loginTransit";
 const MOOC_LOGIN_PATH: &str = "/meol/homepage/common/sso_login.jsp";
+const CHAOXING_LOGIN_PATH: &str =
+    "/authserver/login?service=http%3A%2F%2Ffysso.chaoxing.com%2Fsso%2Fcsust";
 const EDUCATION_SSO_PATH: &str = "/sso.jsp";
 const EDUCATION_LOGIN_PATH: &str =
     "/authserver/login?service=http%3A%2F%2Fxk.csust.edu.cn%2Fsso.jsp";
@@ -196,6 +198,22 @@ impl SsoHelper {
         } else {
             Err(SsoError::LoginToMoocFailed(format!(
                 "重定向URL异常: {final_url}"
+            )))
+        }
+    }
+
+    /// 从已登录的统一身份认证会话登录超星学习通。
+    pub async fn login_to_chaoxing(&self) -> Result<(), SsoError> {
+        let url = make_url(self.mode, ServiceDomain::AuthServer, CHAOXING_LOGIN_PATH);
+        let response =
+            perform_request(self.session.client.get(url), Some(self.login_check())).await?;
+
+        if response.final_url.path().ends_with("/portal") {
+            Ok(())
+        } else {
+            Err(SsoError::LoginToChaoxingFailed(format!(
+                "重定向路径异常: {}",
+                response.final_url.path()
             )))
         }
     }

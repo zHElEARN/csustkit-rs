@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use encoding_rs::{Encoding, UTF_8};
 use reqwest::{
-    RequestBuilder,
+    RequestBuilder, StatusCode,
     header::{CONTENT_TYPE, HeaderMap},
 };
 use serde::de::DeserializeOwned;
@@ -21,6 +21,7 @@ pub(crate) struct LoginCheck<E> {
 
 pub(crate) struct RequestResponse {
     pub(crate) final_url: Url,
+    pub(crate) status: StatusCode,
     pub(crate) headers: HeaderMap,
     pub(crate) body: Vec<u8>,
 }
@@ -64,6 +65,7 @@ where
     let response = request.send().await?;
     let response = RequestResponse {
         final_url: response.url().clone(),
+        status: response.status(),
         headers: response.headers().clone(),
         body: response.bytes().await?.to_vec(),
     };

@@ -1,5 +1,7 @@
 #[path = "csustkit/campus_card.rs"]
 mod campus_card;
+#[path = "csustkit/chaoxing.rs"]
+mod chaoxing;
 #[path = "csustkit/console.rs"]
 mod console;
 #[path = "csustkit/edu.rs"]
@@ -10,12 +12,14 @@ mod formatting;
 mod login;
 #[path = "csustkit/mooc.rs"]
 mod mooc;
+#[path = "csustkit/physics_experiment.rs"]
+mod physics_experiment;
 #[path = "csustkit/webvpn.rs"]
 mod webvpn;
 
 use std::sync::Arc;
 
-use csustkit::CsustSession;
+use csustkit::{ConnectionMode, CsustSession, physics_experiment::PhysicsExperimentHelper};
 
 #[tokio::main]
 async fn main() {
@@ -33,6 +37,7 @@ async fn main() {
         println!("\n=== 入口菜单 ===");
         println!("1. 登录演示");
         println!("2. WebVPN 工具");
+        println!("3. 大物实验（直连）");
         println!("0. 退出");
 
         match console::prompt("请选择") {
@@ -43,6 +48,13 @@ async fn main() {
                     }
                 }
                 "2" => webvpn::run_menu(),
+                "3" => {
+                    let helper = PhysicsExperimentHelper::with_session(
+                        ConnectionMode::Direct,
+                        Arc::clone(&session),
+                    );
+                    physics_experiment::run_menu(&helper).await;
+                }
                 "0" => break,
                 _ => println!("输入无效，请重新选择。"),
             },

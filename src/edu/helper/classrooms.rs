@@ -180,16 +180,8 @@ fn parse_columns(
     let mut columns = Vec::new();
     let mut seen_days = HashSet::new();
     for header in day_header.child_elements().skip(1) {
-        let day = match element_text(header).as_str() {
-            "星期一" => DayOfWeek::Monday,
-            "星期二" => DayOfWeek::Tuesday,
-            "星期三" => DayOfWeek::Wednesday,
-            "星期四" => DayOfWeek::Thursday,
-            "星期五" => DayOfWeek::Friday,
-            "星期六" => DayOfWeek::Saturday,
-            "星期日" | "星期天" => DayOfWeek::Sunday,
-            _ => return Err(classroom_error("星期表头无效")),
-        };
+        let day = DayOfWeek::from_chinese_name(&element_text(header))
+            .ok_or_else(|| classroom_error("星期表头无效"))?;
         if !seen_days.insert(day) {
             return Err(classroom_error("星期表头重复"));
         }

@@ -1,8 +1,10 @@
 pub mod campus_card;
+pub mod chaoxing;
 pub mod connection;
 pub mod edu;
 mod enums;
 pub mod mooc;
+pub mod physics_experiment;
 mod request;
 pub mod session;
 pub mod sso;

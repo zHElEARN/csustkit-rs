@@ -1,11 +1,11 @@
 use std::{env, fs, sync::Arc};
 
 use csustkit::{
-    ConnectionMode, CsustSession, campus_card::CampusCardHelper, edu::EduHelper, mooc::MoocHelper,
-    sso::SsoHelper,
+    ConnectionMode, CsustSession, campus_card::CampusCardHelper, chaoxing::ChaoxingHelper,
+    edu::EduHelper, mooc::MoocHelper, physics_experiment::PhysicsExperimentHelper, sso::SsoHelper,
 };
 
-use super::{campus_card, console, edu, mooc};
+use super::{campus_card, chaoxing, console, edu, mooc, physics_experiment};
 
 pub struct LoginContext {
     pub mode: ConnectionMode,
@@ -85,11 +85,16 @@ pub async fn run_main_menu(login: LoginContext) {
     let mooc_helper = MoocHelper::with_session(login.mode, Arc::clone(&login.session));
     let edu_helper = EduHelper::with_session(login.mode, Arc::clone(&login.session));
     let campus_card_helper = CampusCardHelper::with_session(login.mode, Arc::clone(&login.session));
+    let chaoxing_helper = ChaoxingHelper::with_session(login.mode, Arc::clone(&login.session));
+    let physics_helper =
+        PhysicsExperimentHelper::with_session(login.mode, Arc::clone(&login.session));
     loop {
         println!("\n=== 主菜单 ===");
         println!("1. 网络课程中心");
         println!("2. 教务系统");
         println!("3. 校园卡系统");
+        println!("4. 超星学习通");
+        println!("5. 大物实验");
         println!("0. 返回入口菜单");
         let Some(choice) = console::prompt("请选择") else {
             return;
@@ -100,6 +105,8 @@ pub async fn run_main_menu(login: LoginContext) {
             "3" => {
                 campus_card::run_menu(Arc::clone(&campus_card_helper), Arc::clone(&login.sso)).await
             }
+            "4" => chaoxing::run_menu(&chaoxing_helper, &login.sso).await,
+            "5" => physics_experiment::run_menu(&physics_helper).await,
             "0" => return,
             _ => println!("输入无效，请重新选择。"),
         }
