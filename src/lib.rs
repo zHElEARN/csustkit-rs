@@ -9,6 +9,7 @@ mod request;
 pub mod session;
 pub mod sso;
 mod url_factory;
+pub mod utils;
 pub mod webvpn;
 
 pub use connection::ConnectionMode;
