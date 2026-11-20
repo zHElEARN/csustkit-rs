@@ -8,10 +8,9 @@ use crate::{
 };
 
 use super::super::{
-    CourseGrade, CourseGradeQuery, CourseNature, GradeComponent, GradeDetail,
-    request::send_with_retry, types::EduError,
+    CourseGrade, CourseGradeQuery, CourseNature, GradeComponent, GradeDetail, types::EduError,
 };
-use super::{EduHelper, element_text, ensure_logged_in};
+use super::{EduHelper, element_text};
 
 const COURSE_GRADES_PATH: &str = "/jsxsd/kscj/cjcx_list";
 const COURSE_GRADE_SEMESTERS_PATH: &str = "/jsxsd/kscj/cjcx_query";
@@ -34,20 +33,20 @@ impl EduHelper {
         form.append_pair("kksj", academic_year_semester);
         form.append_pair("xsfs", query.display_mode.request_id());
         let form = form.finish();
-        let response = send_with_retry(|| {
-            self.session
-                .client
-                .post(&url)
-                .header(
-                    CONTENT_TYPE,
-                    "application/x-www-form-urlencoded; charset=utf-8",
-                )
-                .body(form.clone())
-        })
-        .await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self
+            .request(|| {
+                self.session
+                    .client
+                    .post(&url)
+                    .header(
+                        CONTENT_TYPE,
+                        "application/x-www-form-urlencoded; charset=utf-8",
+                    )
+                    .body(form.clone())
+            })
+            .await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_course_grades(self.mode, &body)
     }
 
@@ -57,18 +56,18 @@ impl EduHelper {
             ServiceDomain::Education,
             COURSE_GRADE_SEMESTERS_PATH,
         );
-        let response = send_with_retry(|| self.session.client.get(&url)).await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self.request(|| self.session.client.get(&url)).await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_available_semesters_for_course_grades(&body)
     }
 
     pub async fn get_grade_detail(&self, url: &Url) -> Result<GradeDetail, EduError> {
-        let response = send_with_retry(|| self.session.client.get(url.clone())).await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self
+            .request(|| self.session.client.get(url.clone()))
+            .await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_grade_detail(&body)
     }
 }

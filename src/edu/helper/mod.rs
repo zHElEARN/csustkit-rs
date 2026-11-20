@@ -3,15 +3,18 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use encoding_rs::UTF_8;
+use reqwest::RequestBuilder;
 use scraper::ElementRef;
 
 use crate::{
     connection::ConnectionMode,
+    request::{LoginCheck, RequestResponse},
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
 
-use super::types::EduError;
+use super::{request::send_with_retry, types::EduError};
 
 mod classrooms;
 mod exams;
@@ -61,13 +64,17 @@ impl EduHelper {
             .map_err(EduError::LogoutFailed)?;
         Ok(())
     }
-}
-
-fn ensure_logged_in(body: &str) -> Result<(), EduError> {
-    if body.contains("请输入账号") {
-        Err(EduError::NotLoggedIn)
-    } else {
-        Ok(())
+    async fn request(
+        &self,
+        build_request: impl Fn() -> RequestBuilder,
+    ) -> Result<RequestResponse, EduError> {
+        send_with_retry(build_request, || LoginCheck {
+            mode: self.mode,
+            fallback_encoding: UTF_8,
+            subsystem_login: |body, _| body.contains("请输入账号"),
+            not_logged_in: EduError::NotLoggedIn,
+        })
+        .await
     }
 }
 

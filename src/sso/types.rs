@@ -21,6 +21,8 @@ pub enum SsoError {
     EducationRequest(#[from] EducationRequestError),
     #[error("统一身份认证未登录")]
     NotLoggedIn,
+    #[error("统一身份认证用户信息解析失败: {0}")]
+    ProfileDecodeFailed(#[source] serde_json::Error),
     #[error(transparent)]
     Network(#[from] reqwest::Error),
     #[error("获取当前时间失败: {0}")]

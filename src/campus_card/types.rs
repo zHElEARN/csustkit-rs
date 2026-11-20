@@ -16,6 +16,8 @@ pub enum CampusCardError {
     ElectricityRetrievalFailed(String),
     #[error("校园卡系统未登录")]
     NotLoggedIn,
+    #[error("校园卡响应解析失败: {0}")]
+    ResponseDecodeFailed(#[from] serde_json::Error),
     #[error(transparent)]
     Network(#[from] reqwest::Error),
 }

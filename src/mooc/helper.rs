@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
 use chrono::{FixedOffset, NaiveDateTime, TimeZone};
-use encoding_rs::GBK;
+use encoding_rs::{Encoding, GBK, UTF_8};
 use scraper::{ElementRef, Html, Selector};
 use serde::Deserialize;
 
 use crate::{
     connection::ConnectionMode,
+    request::{LoginCheck, RequestResponse, perform_request},
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
@@ -65,9 +66,6 @@ impl MoocHelper {
 
     pub async fn get_profile(&self) -> Result<Profile, MoocError> {
         let response = self.get_gbk(PROFILE_PATH).await?;
-        if is_login_required(&response) {
-            return Err(MoocError::NotLoggedIn);
-        }
 
         let document = Html::parse_document(&response);
         let selector = selector(".userinfobody > ul > li")
@@ -97,9 +95,6 @@ impl MoocHelper {
 
     pub async fn get_courses(&self) -> Result<Vec<Course>, MoocError> {
         let response = self.get_gbk(COURSES_PATH).await?;
-        if is_login_required(&response) {
-            return Err(MoocError::NotLoggedIn);
-        }
 
         let document = Html::parse_document(&response);
         let table_selector = selector("#table2")
@@ -170,9 +165,6 @@ impl MoocHelper {
             course.id
         );
         let response = self.get_utf8(&path).await?;
-        if is_login_required(&response) {
-            return Err(MoocError::NotLoggedIn);
-        }
         let parsed = serde_json::from_str::<AssignmentsResponse>(&response).map_err(|error| {
             MoocError::AssignmentsRetrievalFailed(format!("作业信息格式无效: {error}"))
         })?;
@@ -207,9 +199,6 @@ impl MoocHelper {
             course.id
         );
         let response = self.get_gbk(&path).await?;
-        if is_login_required(&response) {
-            return Err(MoocError::NotLoggedIn);
-        }
 
         let document = Html::parse_document(&response);
         let table_selector = selector(".valuelist")
@@ -264,9 +253,6 @@ impl MoocHelper {
 
     pub async fn get_courses_with_pending_assignments(&self) -> Result<Vec<Course>, MoocError> {
         let response = self.get_gbk(PENDING_ASSIGNMENTS_PATH).await?;
-        if is_login_required(&response) {
-            return Err(MoocError::NotLoggedIn);
-        }
 
         let document = Html::parse_document(&response);
         let reminder_selector = selector("#reminder").map_err(|error| {
@@ -334,29 +320,35 @@ impl MoocHelper {
     }
 
     async fn get_gbk(&self, path: &str) -> Result<String, MoocError> {
-        let bytes = self
-            .session
-            .client
-            .get(make_url(self.mode, ServiceDomain::Mooc, path))
-            .send()
-            .await?
-            .bytes()
-            .await?;
-        Ok(GBK.decode(&bytes).0.into_owned())
+        let response = self.get(path, GBK).await?;
+        Ok(GBK.decode(&response.body).0.into_owned())
     }
 
     async fn get_utf8(&self, path: &str) -> Result<String, MoocError> {
-        let bytes = self
-            .session
-            .client
-            .get(make_url(self.mode, ServiceDomain::Mooc, path))
-            .send()
-            .await?
-            .bytes()
-            .await?;
-        String::from_utf8(bytes.to_vec()).map_err(|error| {
+        let response = self.get(path, UTF_8).await?;
+        String::from_utf8(response.body).map_err(|error| {
             MoocError::AssignmentsRetrievalFailed(format!("作业信息不是有效的 UTF-8: {error}"))
         })
+    }
+
+    async fn get(
+        &self,
+        path: &str,
+        fallback_encoding: &'static Encoding,
+    ) -> Result<RequestResponse, MoocError> {
+        let url = make_url(self.mode, ServiceDomain::Mooc, path);
+        perform_request(
+            self.session.client.get(url),
+            Some(LoginCheck {
+                mode: self.mode,
+                fallback_encoding,
+                subsystem_login: |body, _| {
+                    body.contains("<TITLE>错误！</TITLE>") || body.contains("请登录！")
+                },
+                not_logged_in: MoocError::NotLoggedIn,
+            }),
+        )
+        .await
     }
 }
 
@@ -368,10 +360,6 @@ fn text(element: Option<ElementRef<'_>>) -> String {
     element
         .map(|element| element.text().collect::<String>().trim().to_owned())
         .unwrap_or_default()
-}
-
-fn is_login_required(response: &str) -> bool {
-    response.contains("<TITLE>错误！</TITLE>") || response.contains("请登录！")
 }
 
 fn parse_datetime(value: &str, offset: FixedOffset) -> Option<chrono::DateTime<FixedOffset>> {

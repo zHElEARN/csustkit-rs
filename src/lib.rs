@@ -3,6 +3,7 @@ pub mod connection;
 pub mod edu;
 mod enums;
 pub mod mooc;
+mod request;
 pub mod session;
 pub mod sso;
 mod url_factory;

@@ -1,10 +1,13 @@
 use std::sync::{Arc, RwLock};
 
+use encoding_rs::UTF_8;
+use reqwest::RequestBuilder;
 use serde::de::DeserializeOwned;
 
 use crate::{
     Campus,
     connection::ConnectionMode,
+    request::{LoginCheck, perform_request},
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
@@ -12,7 +15,7 @@ use crate::{
 use super::{
     protocol::{
         BaseQueryResponse, BaseResponse, QueryItem, RoomPowerInfo, TokenResponse,
-        profile_from_response, remaining_electricity,
+        is_login_response, profile_from_response, remaining_electricity,
     },
     types::{Building, CampusCardError, Profile, Room},
 };
@@ -69,7 +72,7 @@ impl CampusCardHelper {
             ("device_token", "h5"),
             ("synAccessSource", "h5"),
         ];
-        let response = self
+        let request = self
             .session
             .client
             .post(make_url(
@@ -78,11 +81,8 @@ impl CampusCardHelper {
                 "/berserker-auth/oauth/token",
             ))
             .header("Authorization", TOKEN_AUTHORIZATION)
-            .form(&parameters)
-            .send()
-            .await?
-            .json::<TokenResponse>()
-            .await?;
+            .form(&parameters);
+        let response: TokenResponse = self.request_json(request).await?;
 
         self.set_token(Some(response.access_token));
         Ok(())
@@ -90,7 +90,7 @@ impl CampusCardHelper {
 
     pub async fn get_profile(&self) -> Result<Profile, CampusCardError> {
         let token = self.required_token()?;
-        let response = self
+        let request = self
             .session
             .client
             .get(make_url(
@@ -98,11 +98,8 @@ impl CampusCardHelper {
                 ServiceDomain::CampusCard,
                 "/berserker-base/user?synAccessSource=h5",
             ))
-            .header("synjones-auth", format!("bearer {token}"))
-            .send()
-            .await?
-            .json::<BaseResponse<Profile>>()
-            .await?;
+            .header("synjones-auth", format!("bearer {token}"));
+        let response: BaseResponse<Profile> = self.request_json(request).await?;
 
         profile_from_response(response)
     }
@@ -120,9 +117,6 @@ impl CampusCardHelper {
             .get_third_data::<Vec<QueryItem>>(&token, &parameters)
             .await?;
 
-        if response.code == 401 {
-            return Err(CampusCardError::NotLoggedIn);
-        }
         let items = response.map.ok_or_else(|| {
             CampusCardError::BuildingsRetrievalFailed(format!(
                 "获取楼栋列表失败: {}",
@@ -155,9 +149,6 @@ impl CampusCardHelper {
             .get_third_data::<Vec<QueryItem>>(&token, &parameters)
             .await?;
 
-        if response.code == 401 {
-            return Err(CampusCardError::NotLoggedIn);
-        }
         let items = response.map.ok_or_else(|| {
             CampusCardError::RoomsRetrievalFailed(format!(
                 "获取宿舍列表失败: {}",
@@ -191,9 +182,6 @@ impl CampusCardHelper {
             .get_third_data::<RoomPowerInfo>(&token, &parameters)
             .await?;
 
-        if response.code == 401 {
-            return Err(CampusCardError::NotLoggedIn);
-        }
         let power = response.map.ok_or_else(|| {
             CampusCardError::ElectricityRetrievalFailed(format!(
                 "获取宿舍电量失败: {}",
@@ -237,7 +225,7 @@ impl CampusCardHelper {
         token: &str,
         parameters: &[(&str, &str)],
     ) -> Result<BaseQueryResponse<T>, CampusCardError> {
-        let response = self
+        let request = self
             .session
             .client
             .post(make_url(
@@ -247,13 +235,25 @@ impl CampusCardHelper {
             ))
             .header("Authorization", QUERY_AUTHORIZATION)
             .header("synjones-auth", format!("bearer {token}"))
-            .form(parameters)
-            .send()
-            .await?
-            .json::<BaseQueryResponse<T>>()
-            .await?;
+            .form(parameters);
+        self.request_json(request).await
+    }
 
-        Ok(response)
+    async fn request_json<T: DeserializeOwned>(
+        &self,
+        request: RequestBuilder,
+    ) -> Result<T, CampusCardError> {
+        let response = perform_request(
+            request,
+            Some(LoginCheck {
+                mode: self.mode,
+                fallback_encoding: UTF_8,
+                subsystem_login: |body, _| is_login_response(body),
+                not_logged_in: CampusCardError::NotLoggedIn,
+            }),
+        )
+        .await?;
+        Ok(response.json()?)
     }
 }
 

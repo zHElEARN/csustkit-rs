@@ -5,8 +5,8 @@ use url::form_urlencoded;
 
 use crate::url_factory::{ServiceDomain, make_url};
 
-use super::super::{SemesterOptions, request::send_with_retry, types::EduError};
-use super::{EduHelper, element_text, ensure_logged_in};
+use super::super::{SemesterOptions, types::EduError};
+use super::{EduHelper, element_text};
 
 const SEMESTER_START_DATE_PATH: &str = "/jsxsd/jxzl/jxzl_query";
 
@@ -23,20 +23,20 @@ impl EduHelper {
         let mut form = form_urlencoded::Serializer::new(String::new());
         form.append_pair("xnxq01id", academic_year_semester.as_deref().unwrap_or(""));
         let form = form.finish();
-        let response = send_with_retry(|| {
-            self.session
-                .client
-                .post(&url)
-                .header(
-                    CONTENT_TYPE,
-                    "application/x-www-form-urlencoded; charset=utf-8",
-                )
-                .body(form.clone())
-        })
-        .await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self
+            .request(|| {
+                self.session
+                    .client
+                    .post(&url)
+                    .header(
+                        CONTENT_TYPE,
+                        "application/x-www-form-urlencoded; charset=utf-8",
+                    )
+                    .body(form.clone())
+            })
+            .await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_semester_start_date(&body)
     }
 
@@ -48,10 +48,9 @@ impl EduHelper {
             ServiceDomain::Education,
             SEMESTER_START_DATE_PATH,
         );
-        let response = send_with_retry(|| self.session.client.get(&url)).await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self.request(|| self.session.client.get(&url)).await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_available_semesters_for_start_date(&body)
     }
 }

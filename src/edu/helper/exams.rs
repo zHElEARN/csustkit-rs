@@ -5,11 +5,8 @@ use url::form_urlencoded;
 
 use crate::url_factory::{ServiceDomain, make_url};
 
-use super::super::{
-    Exam, ExamScheduleQuery, SemesterOptions, SemesterType, request::send_with_retry,
-    types::EduError,
-};
-use super::{EduHelper, element_text, ensure_logged_in};
+use super::super::{Exam, ExamScheduleQuery, SemesterOptions, SemesterType, types::EduError};
+use super::{EduHelper, element_text};
 
 const EXAM_SCHEDULE_PATH: &str = "/jsxsd/xsks/xsksap_list";
 const EXAM_SCHEDULE_SEMESTERS_PATH: &str = "/jsxsd/xsks/xsksap_query";
@@ -23,10 +20,9 @@ impl EduHelper {
             ServiceDomain::Education,
             EXAM_SCHEDULE_SEMESTERS_PATH,
         );
-        let response = send_with_retry(|| self.session.client.get(&url)).await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self.request(|| self.session.client.get(&url)).await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_exam_schedule_semesters(&body)
     }
 
@@ -51,20 +47,20 @@ impl EduHelper {
         );
         form.append_pair("xnxqid", &academic_year_semester);
         let form = form.finish();
-        let response = send_with_retry(|| {
-            self.session
-                .client
-                .post(&url)
-                .header(
-                    CONTENT_TYPE,
-                    "application/x-www-form-urlencoded; charset=utf-8",
-                )
-                .body(form.clone())
-        })
-        .await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self
+            .request(|| {
+                self.session
+                    .client
+                    .post(&url)
+                    .header(
+                        CONTENT_TYPE,
+                        "application/x-www-form-urlencoded; charset=utf-8",
+                    )
+                    .body(form.clone())
+            })
+            .await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_exam_schedule(&body)
     }
 }

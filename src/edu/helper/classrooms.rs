@@ -7,8 +7,8 @@ use crate::{
     url_factory::{ServiceDomain, make_url},
 };
 
-use super::super::{AvailableClassroomsQuery, request::send_with_retry, types::EduError};
-use super::{EduHelper, element_text, ensure_logged_in};
+use super::super::{AvailableClassroomsQuery, types::EduError};
+use super::{EduHelper, element_text};
 
 const AVAILABLE_CLASSROOMS_PATH: &str = "/jsxsd/kbcx/kbxx_classroom_ifr";
 
@@ -54,20 +54,20 @@ impl EduHelper {
         form.append_pair("jc1", start_section);
         form.append_pair("jc2", end_section);
         let form = form.finish();
-        let response = send_with_retry(|| {
-            self.session
-                .client
-                .post(&url)
-                .header(
-                    CONTENT_TYPE,
-                    "application/x-www-form-urlencoded; charset=utf-8",
-                )
-                .body(form.clone())
-        })
-        .await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self
+            .request(|| {
+                self.session
+                    .client
+                    .post(&url)
+                    .header(
+                        CONTENT_TYPE,
+                        "application/x-www-form-urlencoded; charset=utf-8",
+                    )
+                    .body(form.clone())
+            })
+            .await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_available_classrooms(&body)
     }
 }

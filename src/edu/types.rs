@@ -326,3 +326,9 @@ pub enum EduError {
     #[error("教务系统未登录")]
     NotLoggedIn,
 }
+
+impl From<reqwest::Error> for EduError {
+    fn from(error: reqwest::Error) -> Self {
+        Self::EducationRequest(error.into())
+    }
+}

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use encoding_rs::UTF_8;
 use reqwest::{
     Response,
     header::{LOCATION, SET_COOKIE},
@@ -9,6 +10,7 @@ use url::Url;
 use crate::{
     connection::ConnectionMode,
     edu::request::send_with_retry,
+    request::{LoginCheck, perform_request},
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
@@ -158,48 +160,31 @@ impl SsoHelper {
     }
 
     pub async fn get_login_user(&self) -> Result<SsoProfile, SsoError> {
-        let response = self
-            .session
-            .client
-            .get(make_url(self.mode, ServiceDomain::Ehall, "/getLoginUser"))
-            .send()
-            .await?;
-
-        let response = response.json::<LoginUserResponse>().await?;
+        let url = make_url(self.mode, ServiceDomain::Ehall, "/getLoginUser");
+        let response =
+            perform_request(self.session.client.get(url), Some(self.login_check())).await?;
+        let response = response
+            .json::<LoginUserResponse>()
+            .map_err(SsoError::ProfileDecodeFailed)?;
         response.data.ok_or(SsoError::NotLoggedIn)
     }
 
     /// 从已登录的统一身份认证会话获取校园卡登录凭据。
     pub async fn login_to_campus_card(&self) -> Result<String, SsoError> {
-        let response = self
-            .session
-            .client
-            .get(make_url(
-                self.mode,
-                ServiceDomain::CampusCard,
-                CAMPUS_CARD_LOGIN_PATH,
-            ))
-            .send()
-            .await?;
-        let final_url = response.url();
+        let url = make_url(self.mode, ServiceDomain::CampusCard, CAMPUS_CARD_LOGIN_PATH);
+        let response =
+            perform_request(self.session.client.get(url), Some(self.login_check())).await?;
         let expected_prefix = make_url(self.mode, ServiceDomain::CampusCard, "/plat");
 
-        extract_campus_card_ticket(final_url, &expected_prefix)
+        extract_campus_card_ticket(&response.final_url, &expected_prefix)
     }
 
     /// 从已登录的统一身份认证会话登录网络课程中心。
     pub async fn login_to_mooc(&self) -> Result<(), SsoError> {
-        let response = self
-            .session
-            .client
-            .get(make_url(self.mode, ServiceDomain::Mooc, MOOC_LOGIN_PATH))
-            .send()
-            .await?;
-        let final_url = response.url().clone();
-
-        if final_url.path().contains("/authserver/login") {
-            return Err(SsoError::NotLoggedIn);
-        }
+        let url = make_url(self.mode, ServiceDomain::Mooc, MOOC_LOGIN_PATH);
+        let response =
+            perform_request(self.session.client.get(url), Some(self.login_check())).await?;
+        let final_url = response.final_url;
 
         let personal_url = make_url(self.mode, ServiceDomain::Mooc, "/meol/personal.do");
         let index_url = make_url(self.mode, ServiceDomain::Mooc, "/meol/index.do");
@@ -215,12 +200,19 @@ impl SsoHelper {
     /// 从已登录的统一身份认证会话登录教务系统。
     pub async fn login_to_education(&self) -> Result<(), SsoError> {
         let education_url = make_url(self.mode, ServiceDomain::Education, EDUCATION_SSO_PATH);
-        send_with_retry(|| self.session.client.get(&education_url)).await?;
+        send_with_retry(
+            || self.session.client.get(&education_url),
+            || self.login_check(),
+        )
+        .await?;
 
         let login_url = make_url(self.mode, ServiceDomain::AuthServer, EDUCATION_LOGIN_PATH);
-        let response = send_with_retry(|| self.session.client.get(&login_url)).await?;
-        let body = String::from_utf8_lossy(&response.body);
-        if body.contains("账号登录") {
+        let response = send_with_retry(
+            || self.session.client.get(&login_url),
+            || self.login_check(),
+        )
+        .await?;
+        if response.text().contains("账号登录") {
             Err(SsoError::NotLoggedIn)
         } else {
             Ok(())
@@ -255,6 +247,15 @@ impl SsoHelper {
 }
 
 impl SsoHelper {
+    fn login_check(&self) -> LoginCheck<SsoError> {
+        LoginCheck {
+            mode: self.mode,
+            fallback_encoding: UTF_8,
+            subsystem_login: |_, final_url| final_url.path().ends_with("/authserver/login"),
+            not_logged_in: SsoError::NotLoggedIn,
+        }
+    }
+
     async fn get_following_redirects(&self, initial_url: String) -> Result<Response, SsoError> {
         let mut url = initial_url;
         for _ in 0..10 {

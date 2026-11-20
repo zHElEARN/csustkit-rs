@@ -9,11 +9,8 @@ use crate::{
     url_factory::{ServiceDomain, make_url},
 };
 
-use super::super::{
-    Course, CourseSchedule, ScheduleSession, SemesterOptions, request::send_with_retry,
-    types::EduError,
-};
-use super::{EduHelper, element_text, ensure_logged_in};
+use super::super::{Course, CourseSchedule, ScheduleSession, SemesterOptions, types::EduError};
+use super::{EduHelper, element_text};
 
 const COURSE_SCHEDULE_PATH: &str = "/jsxsd/xskb/xskb_list.do";
 const COURSE_SCHEDULE_WEEKDAYS: [DayOfWeek; 7] = [
@@ -31,10 +28,9 @@ impl EduHelper {
         &self,
     ) -> Result<SemesterOptions, EduError> {
         let url = make_url(self.mode, ServiceDomain::Education, COURSE_SCHEDULE_PATH);
-        let response = send_with_retry(|| self.session.client.get(&url)).await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self.request(|| self.session.client.get(&url)).await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_course_schedule_semesters(&body)
     }
 
@@ -46,20 +42,20 @@ impl EduHelper {
         let mut form = form_urlencoded::Serializer::new(String::new());
         form.append_pair("xnxq01id", academic_year_semester.as_deref().unwrap_or(""));
         let form = form.finish();
-        let response = send_with_retry(|| {
-            self.session
-                .client
-                .post(&url)
-                .header(
-                    CONTENT_TYPE,
-                    "application/x-www-form-urlencoded; charset=utf-8",
-                )
-                .body(form.clone())
-        })
-        .await?;
-        let body = String::from_utf8_lossy(&response.body);
+        let response = self
+            .request(|| {
+                self.session
+                    .client
+                    .post(&url)
+                    .header(
+                        CONTENT_TYPE,
+                        "application/x-www-form-urlencoded; charset=utf-8",
+                    )
+                    .body(form.clone())
+            })
+            .await?;
+        let body = response.text();
 
-        ensure_logged_in(&body)?;
         parse_course_schedule(&body)
     }
 }
