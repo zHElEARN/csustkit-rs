@@ -64,7 +64,6 @@ pub struct Assignment {
     pub detail_url: Url,
 }
 
-#[cfg_attr(feature = "uniffi", uniffi::export(name = "ChaoxingAssignment"))]
 impl Assignment {
     pub const fn is_completed(&self) -> bool {
         matches!(self.status, AssignmentStatus::Completed)
