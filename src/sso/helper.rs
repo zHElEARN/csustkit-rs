@@ -53,10 +53,7 @@ impl SsoHelper {
             return Err(SsoError::GetLoginFormFailed("账号已登录".to_owned()));
         }
 
-        let body = response
-            .text()
-            .await
-            .map_err(|_| SsoError::GetLoginFormFailed("无响应数据".to_owned()))?;
+        let body = response.text().await.map_err(login_form_request_error)?;
         check_need_improve_user_info(&body, &final_url)?;
         parse_login_form(&body)
     }
@@ -129,7 +126,11 @@ impl SsoHelper {
             .await?;
 
         let final_url = response.url().clone();
-        let body = response.text().await.unwrap_or_default();
+        let body = match response.text().await {
+            Ok(body) => body,
+            Err(error) if error.is_timeout() => return Err(error.into()),
+            Err(_) => String::new(),
+        };
         check_need_improve_user_info(&body, &final_url)?;
 
         let mut check_url = final_url.clone();
@@ -274,7 +275,7 @@ impl SsoHelper {
                 .get(&url)
                 .send()
                 .await
-                .map_err(|_| SsoError::GetLoginFormFailed("无响应数据".to_owned()))?;
+                .map_err(login_form_request_error)?;
 
             if !response.status().is_redirection() {
                 return Ok(response);
@@ -290,6 +291,14 @@ impl SsoHelper {
         }
 
         Err(SsoError::GetLoginFormFailed("无响应数据".to_owned()))
+    }
+}
+
+fn login_form_request_error(error: reqwest::Error) -> SsoError {
+    if error.is_timeout() {
+        error.into()
+    } else {
+        SsoError::GetLoginFormFailed("无响应数据".to_owned())
     }
 }
 

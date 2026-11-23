@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use reqwest::{Certificate, Client, redirect::Policy};
 use url::Url;
@@ -9,6 +9,7 @@ use cookies::SessionCookieJar;
 pub use cookies::{SessionCookie, SessionCookieError};
 
 const USER_AGENT: &str = concat!("csustkit-rs/", env!("CARGO_PKG_VERSION"));
+const CONNECTION_AND_READ_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Debug, thiserror::Error)]
 pub enum SessionRequestError {
@@ -23,6 +24,8 @@ pub enum SessionRequestError {
 /// The two clients use the same cookie jar: one follows redirects for normal
 /// requests, while the other lets SSO inspect each redirect explicitly. Clones
 /// share the same cookie jar and therefore the same login state.
+/// Both clients time out after 60 seconds of connecting or waiting for
+/// response data. Each successful read resets the read timeout.
 #[derive(Clone)]
 pub struct CsustSession {
     pub(crate) client: Client,
@@ -73,6 +76,8 @@ impl CsustSessionBuilder {
         let cookie_jar = Arc::new(SessionCookieJar::default());
         let build_client = |redirect| {
             Client::builder()
+                .connect_timeout(CONNECTION_AND_READ_TIMEOUT)
+                .read_timeout(CONNECTION_AND_READ_TIMEOUT)
                 .cookie_provider(Arc::clone(&cookie_jar))
                 .redirect(redirect)
                 .user_agent(self.user_agent.as_deref().unwrap_or(USER_AGENT))
