@@ -1,6 +1,6 @@
 use reqwest::header::CONTENT_TYPE;
 use scraper::{ElementRef, Html, Selector};
-use url::{Url, form_urlencoded};
+use url::Url;
 
 use crate::{
     connection::ConnectionMode,
@@ -26,13 +26,13 @@ impl EduHelper {
             .course_nature
             .map(CourseNature::request_id)
             .unwrap_or("");
-        let mut form = form_urlencoded::Serializer::new(String::new());
-        form.append_pair("fxkc", query.study_mode.request_id());
-        form.append_pair("kcmc", &query.course_name);
-        form.append_pair("kcxz", course_nature);
-        form.append_pair("kksj", academic_year_semester);
-        form.append_pair("xsfs", query.display_mode.request_id());
-        let form = form.finish();
+        let params = [
+            ("fxkc", query.study_mode.request_id()),
+            ("kcmc", query.course_name.as_str()),
+            ("kcxz", course_nature),
+            ("kksj", academic_year_semester),
+            ("xsfs", query.display_mode.request_id()),
+        ];
         let response = self
             .request(|| {
                 self.session
@@ -42,7 +42,7 @@ impl EduHelper {
                         CONTENT_TYPE,
                         "application/x-www-form-urlencoded; charset=utf-8",
                     )
-                    .body(form.clone())
+                    .form(&params)
             })
             .await?;
         let body = response.text();

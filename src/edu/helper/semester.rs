@@ -1,7 +1,6 @@
 use chrono::{Days, NaiveDate};
 use reqwest::header::CONTENT_TYPE;
 use scraper::{Html, Selector};
-use url::form_urlencoded;
 
 use crate::url_factory::{ServiceDomain, make_url};
 
@@ -20,9 +19,7 @@ impl EduHelper {
             ServiceDomain::Education,
             SEMESTER_START_DATE_PATH,
         );
-        let mut form = form_urlencoded::Serializer::new(String::new());
-        form.append_pair("xnxq01id", academic_year_semester.as_deref().unwrap_or(""));
-        let form = form.finish();
+        let params = [("xnxq01id", academic_year_semester.as_deref().unwrap_or(""))];
         let response = self
             .request(|| {
                 self.session
@@ -32,7 +29,7 @@ impl EduHelper {
                         CONTENT_TYPE,
                         "application/x-www-form-urlencoded; charset=utf-8",
                     )
-                    .body(form.clone())
+                    .form(&params)
             })
             .await?;
         let body = response.text();

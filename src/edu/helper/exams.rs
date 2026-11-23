@@ -1,7 +1,6 @@
 use chrono::{DateTime, FixedOffset, NaiveDateTime, TimeZone};
 use reqwest::header::CONTENT_TYPE;
 use scraper::{ElementRef, Html, Selector};
-use url::form_urlencoded;
 
 use crate::url_factory::{ServiceDomain, make_url};
 
@@ -36,17 +35,17 @@ impl EduHelper {
         };
         let semester_type = query.semester_type;
         let url = make_url(self.mode, ServiceDomain::Education, EXAM_SCHEDULE_PATH);
-        let mut form = form_urlencoded::Serializer::new(String::new());
-        form.append_pair(
-            "xqlb",
-            semester_type.map(SemesterType::request_id).unwrap_or(""),
-        );
-        form.append_pair(
-            "xqlbmc",
-            semester_type.map(SemesterType::display_name).unwrap_or(""),
-        );
-        form.append_pair("xnxqid", &academic_year_semester);
-        let form = form.finish();
+        let params = [
+            (
+                "xqlb",
+                semester_type.map(SemesterType::request_id).unwrap_or(""),
+            ),
+            (
+                "xqlbmc",
+                semester_type.map(SemesterType::display_name).unwrap_or(""),
+            ),
+            ("xnxqid", academic_year_semester.as_str()),
+        ];
         let response = self
             .request(|| {
                 self.session
@@ -56,7 +55,7 @@ impl EduHelper {
                         CONTENT_TYPE,
                         "application/x-www-form-urlencoded; charset=utf-8",
                     )
-                    .body(form.clone())
+                    .form(&params)
             })
             .await?;
         let body = response.text();

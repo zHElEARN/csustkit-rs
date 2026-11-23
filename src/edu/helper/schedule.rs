@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use reqwest::header::CONTENT_TYPE;
 use scraper::{ElementRef, Html, Selector, node::Node};
-use url::form_urlencoded;
 
 use crate::{
     DayOfWeek,
@@ -30,9 +29,7 @@ impl EduHelper {
         academic_year_semester: Option<String>,
     ) -> Result<CourseSchedule, EduError> {
         let url = make_url(self.mode, ServiceDomain::Education, COURSE_SCHEDULE_PATH);
-        let mut form = form_urlencoded::Serializer::new(String::new());
-        form.append_pair("xnxq01id", academic_year_semester.as_deref().unwrap_or(""));
-        let form = form.finish();
+        let params = [("xnxq01id", academic_year_semester.as_deref().unwrap_or(""))];
         let response = self
             .request(|| {
                 self.session
@@ -42,7 +39,7 @@ impl EduHelper {
                         CONTENT_TYPE,
                         "application/x-www-form-urlencoded; charset=utf-8",
                     )
-                    .body(form.clone())
+                    .form(&params)
             })
             .await?;
         let body = response.text();
