@@ -48,6 +48,13 @@ impl CsustSession {
         self.cookie_jar.export()
     }
 
+    /// 按名称、域和路径更新 Cookie，保留本批未涉及的条目。
+    /// 任一条目校验失败时，整批更新不会生效。
+    pub fn update_cookies(&self, cookies: &[SessionCookie]) -> Result<(), SessionCookieError> {
+        self.cookie_jar.update(cookies)
+    }
+
+    /// 使用完整快照替换当前会话的 Cookie。
     pub fn replace_cookies(&self, cookies: &[SessionCookie]) -> Result<(), SessionCookieError> {
         self.cookie_jar.replace(cookies)
     }
@@ -159,32 +166,73 @@ mod tests {
     }
 
     #[test]
-    fn invalid_replacement_preserves_cookies_and_clear_is_shared() {
+    fn cookie_updates_preserve_other_entries_and_share_session_state() {
         let session = CsustSession::new().unwrap();
         let clone = session.clone();
         let origin = "https://auth.example.test/";
+        let other_path = SessionCookie {
+            origin: origin.into(),
+            set_cookie: "session=other-path; Path=/sso".into(),
+        };
+        let other_host = SessionCookie {
+            origin: "https://edu.example.test/".into(),
+            set_cookie: "session=other-host".into(),
+        };
         session
-            .replace_cookies(&[SessionCookie {
-                origin: origin.into(),
-                set_cookie: "session=old".into(),
-            }])
+            .replace_cookies(&[
+                SessionCookie {
+                    origin: origin.into(),
+                    set_cookie: "session=old".into(),
+                },
+                other_path.clone(),
+                other_host.clone(),
+            ])
             .unwrap();
+        let original = session.export_cookies();
 
-        let result = clone.replace_cookies(&[
-            SessionCookie {
-                origin: origin.into(),
-                set_cookie: "session=new".into(),
-            },
+        let replacement = SessionCookie {
+            origin: origin.into(),
+            set_cookie: "session=new".into(),
+        };
+        let invalid = [
+            replacement.clone(),
             SessionCookie {
                 origin: origin.into(),
                 set_cookie: "other=sample; Domain=unrelated.test".into(),
             },
-        ]);
-        assert!(matches!(
-            result,
-            Err(SessionCookieError::InvalidCookie { index: 1, .. })
-        ));
-        assert_eq!(session.export_cookies()[0].set_cookie, "session=old");
+        ];
+        for import in [CsustSession::replace_cookies, CsustSession::update_cookies] {
+            assert!(matches!(
+                import(&clone, &invalid),
+                Err(SessionCookieError::InvalidCookie { index: 1, .. })
+            ));
+            let exported = session.export_cookies();
+            assert_eq!(exported.len(), original.len());
+            assert!(original.iter().all(|cookie| exported.contains(cookie)));
+        }
+
+        let added = SessionCookie {
+            origin: origin.into(),
+            set_cookie: "added=from-webview".into(),
+        };
+        clone
+            .update_cookies(&[replacement.clone(), added.clone()])
+            .unwrap();
+        let updated = session.export_cookies();
+        assert_eq!(updated.len(), original.len() + 1);
+        assert!(updated.contains(&replacement));
+        let retained = [added, other_path, other_host];
+        assert!(retained.iter().all(|cookie| updated.contains(cookie)));
+
+        clone
+            .update_cookies(&[SessionCookie {
+                origin: origin.into(),
+                set_cookie: "session=; Max-Age=0".into(),
+            }])
+            .unwrap();
+        let expired = session.export_cookies();
+        assert_eq!(expired.len(), retained.len());
+        assert!(retained.iter().all(|cookie| expired.contains(cookie)));
 
         clone.clear_cookies();
         assert!(session.export_cookies().is_empty());

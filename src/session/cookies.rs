@@ -43,19 +43,16 @@ impl SessionCookieJar {
 
     pub(super) fn replace(&self, cookies: &[SessionCookie]) -> Result<(), SessionCookieError> {
         let mut store = CookieStore::default();
-        for (index, cookie) in cookies.iter().enumerate() {
-            let origin = Url::parse(&cookie.origin)
-                .ok()
-                .filter(|url| matches!(url.scheme(), "http" | "https") && url.has_host())
-                .ok_or(SessionCookieError::InvalidOrigin { index })?;
-            HeaderValue::from_str(&cookie.set_cookie)
-                .map_err(|_| SessionCookieError::InvalidHeader { index })?;
-            match store.parse(&cookie.set_cookie, &origin) {
-                Ok(_) | Err(CookieError::Expired) => {}
-                Err(source) => return Err(SessionCookieError::InvalidCookie { index, source }),
-            }
-        }
+        apply_cookies(&mut store, cookies)?;
         *self.0.write().unwrap_or_else(PoisonError::into_inner) = store;
+        Ok(())
+    }
+
+    pub(super) fn update(&self, cookies: &[SessionCookie]) -> Result<(), SessionCookieError> {
+        let mut store = self.0.write().unwrap_or_else(PoisonError::into_inner);
+        let mut updated = store.clone();
+        apply_cookies(&mut updated, cookies)?;
+        *store = updated;
         Ok(())
     }
 
@@ -65,6 +62,25 @@ impl SessionCookieJar {
             .unwrap_or_else(PoisonError::into_inner)
             .clear();
     }
+}
+
+fn apply_cookies(
+    store: &mut CookieStore,
+    cookies: &[SessionCookie],
+) -> Result<(), SessionCookieError> {
+    for (index, cookie) in cookies.iter().enumerate() {
+        let origin = Url::parse(&cookie.origin)
+            .ok()
+            .filter(|url| matches!(url.scheme(), "http" | "https") && url.has_host())
+            .ok_or(SessionCookieError::InvalidOrigin { index })?;
+        HeaderValue::from_str(&cookie.set_cookie)
+            .map_err(|_| SessionCookieError::InvalidHeader { index })?;
+        match store.parse(&cookie.set_cookie, &origin) {
+            Ok(_) | Err(CookieError::Expired) => {}
+            Err(source) => return Err(SessionCookieError::InvalidCookie { index, source }),
+        }
+    }
+    Ok(())
 }
 
 impl ReqwestCookieStore for SessionCookieJar {
