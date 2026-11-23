@@ -2,10 +2,11 @@ use std::{collections::HashMap, ptr};
 
 use chrono::{NaiveDate, NaiveTime};
 
-use super::{OffsetDateTime, UtcDateTime};
+use super::{CalendarDate, CalendarDateError, OffsetDateTime, UtcDateTime};
 use crate::{
+    DayOfWeek,
     edu::{Course, ScheduleSession},
-    utils::schedule::{self, CourseOccurrence as BorrowedCourseOccurrence},
+    utils::schedule::{self, CourseOccurrence as BorrowedCourseOccurrence, SemesterStatus},
 };
 
 /// 一天内的上下课时间，使用长沙当地时间 HH:mm。
@@ -31,8 +32,8 @@ pub struct UnfinishedCourse {
 /// 半开日期区间，包含 start，排除 end。
 #[derive(uniffi::Record)]
 pub struct CalendarDateRange {
-    pub start: NaiveDate,
-    pub end: NaiveDate,
+    pub start: CalendarDate,
+    pub end: CalendarDate,
 }
 
 /// 半开时间区间，包含 start，排除 end。
@@ -61,18 +62,59 @@ fn section_times() -> Vec<SectionTime> {
 
 /// 将给定自然日转换为长沙同一自然日的零点。
 #[uniffi::export]
-fn normalize_semester_start_date(date: NaiveDate) -> Option<OffsetDateTime> {
-    schedule::normalize_semester_start_date(&date.and_time(NaiveTime::MIN).and_utc())
+fn normalize_semester_start_date(
+    date: CalendarDate,
+) -> Result<Option<OffsetDateTime>, CalendarDateError> {
+    let date = NaiveDate::try_from(date)?;
+    Ok(schedule::normalize_semester_start_date(
+        &date.and_time(NaiveTime::MIN).and_utc(),
+    ))
 }
 
 /// 从学期开始日计算半开日期区间。
 #[uniffi::export]
-fn semester_date_range(semester_start_date: NaiveDate, week_count: i64) -> CalendarDateRange {
-    let range = schedule::semester_date_range(semester_start_date, week_count);
-    CalendarDateRange {
-        start: range.start,
-        end: range.end,
-    }
+fn semester_date_range(
+    semester_start_date: CalendarDate,
+    week_count: i64,
+) -> Result<CalendarDateRange, CalendarDateError> {
+    let range = schedule::semester_date_range(semester_start_date.try_into()?, week_count);
+    Ok(CalendarDateRange {
+        start: range.start.into(),
+        end: range.end.into(),
+    })
+}
+
+/// 返回指定周的日期。第 1 周从学期开始日算起，学校课表以周日为周首。
+#[uniffi::export]
+fn dates_of_week(
+    week: i64,
+    semester_start_date: CalendarDate,
+) -> Result<Vec<CalendarDate>, CalendarDateError> {
+    Ok(
+        schedule::dates_of_week(week, semester_start_date.try_into()?)
+            .into_iter()
+            .map(CalendarDate::from)
+            .collect(),
+    )
+}
+
+#[uniffi::export]
+fn day_of_week(date: CalendarDate) -> Result<DayOfWeek, CalendarDateError> {
+    Ok(schedule::day_of_week(date.try_into()?))
+}
+
+/// 根据长沙当地日期判断学期状态。
+#[uniffi::export]
+fn semester_status(
+    semester_start_date: CalendarDate,
+    date: CalendarDate,
+    week_count: i64,
+) -> Result<SemesterStatus, CalendarDateError> {
+    Ok(schedule::semester_status(
+        semester_start_date.try_into()?,
+        date.try_into()?,
+        week_count,
+    ))
 }
 
 /// 判断给定时刻在长沙是否属于今天。
@@ -102,57 +144,70 @@ fn weekly_courses(courses: &[Course]) -> HashMap<i64, Vec<CourseOccurrence>> {
 fn time_range(
     session: &ScheduleSession,
     week: i64,
-    semester_start_date: NaiveDate,
-) -> Option<TimeRange> {
-    schedule::time_range(session, week, semester_start_date).map(|range| TimeRange {
-        start: range.start,
-        end: range.end,
-    })
+    semester_start_date: CalendarDate,
+) -> Result<Option<TimeRange>, CalendarDateError> {
+    Ok(
+        schedule::time_range(session, week, semester_start_date.try_into()?).map(|range| {
+            TimeRange {
+                start: range.start,
+                end: range.end,
+            }
+        }),
+    )
 }
 
 /// 返回给定长沙当天的课程时段，按起始节次排序。
 #[uniffi::export]
 fn courses_on(
-    date: NaiveDate,
-    semester_start_date: NaiveDate,
+    date: CalendarDate,
+    semester_start_date: CalendarDate,
     courses: &[Course],
     week_count: i64,
-) -> Vec<CourseOccurrence> {
+) -> Result<Vec<CourseOccurrence>, CalendarDateError> {
+    let occurrences = schedule::courses_on(
+        date.try_into()?,
+        semester_start_date.try_into()?,
+        courses,
+        week_count,
+    );
     let indices = course_indices(courses);
-    schedule::courses_on(date, semester_start_date, courses, week_count)
+    Ok(occurrences
         .into_iter()
         .map(|occurrence| indexed_occurrence(occurrence, &indices))
-        .collect()
+        .collect())
 }
 
 /// 返回当前或当日尚未开始的课程。
 #[uniffi::export]
 fn unfinished_courses(
     now: UtcDateTime,
-    semester_start_date: NaiveDate,
+    semester_start_date: CalendarDate,
     courses: &[Course],
     week_count: i64,
-) -> Vec<UnfinishedCourse> {
+) -> Result<Vec<UnfinishedCourse>, CalendarDateError> {
+    let unfinished =
+        schedule::unfinished_courses(&now, semester_start_date.try_into()?, courses, week_count);
     let indices = course_indices(courses);
-    schedule::unfinished_courses(&now, semester_start_date, courses, week_count)
+    Ok(unfinished
         .into_iter()
         .map(|course| UnfinishedCourse {
             occurrence: indexed_occurrence(course.occurrence, &indices),
             is_current: course.is_current,
         })
-        .collect()
+        .collect())
 }
 
 /// 依次选取正在上的课、20 分钟内即将开始的课、5 分钟内刚下课的课。
 #[uniffi::export]
 fn relevant_course(
     now: UtcDateTime,
-    semester_start_date: NaiveDate,
+    semester_start_date: CalendarDate,
     courses: &[Course],
     week_count: i64,
-) -> Option<CourseOccurrence> {
-    let occurrence = schedule::relevant_course(&now, semester_start_date, courses, week_count)?;
-    Some(indexed_occurrence(occurrence, &course_indices(courses)))
+) -> Result<Option<CourseOccurrence>, CalendarDateError> {
+    let occurrence =
+        schedule::relevant_course(&now, semester_start_date.try_into()?, courses, week_count);
+    Ok(occurrence.map(|occurrence| indexed_occurrence(occurrence, &course_indices(courses))))
 }
 
 fn course_indices(courses: &[Course]) -> HashMap<*const Course, u64> {

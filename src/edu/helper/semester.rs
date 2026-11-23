@@ -9,7 +9,6 @@ use super::{EduHelper, element_text};
 
 const SEMESTER_START_DATE_PATH: &str = "/jsxsd/jxzl/jxzl_query";
 
-#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
 impl EduHelper {
     pub async fn get_semester_start_date(
         &self,
@@ -37,7 +36,10 @@ impl EduHelper {
 
         parse_semester_start_date(&body)
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl EduHelper {
     pub async fn get_available_semesters_for_start_date(
         &self,
     ) -> Result<SemesterOptions, EduError> {

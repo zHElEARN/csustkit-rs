@@ -92,7 +92,6 @@ pub fn semester_date_range(semester_start_date: NaiveDate, week_count: i64) -> R
 }
 
 /// 返回指定周的日期。第 1 周从学期开始日算起，学校课表以周日为周首。
-#[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn dates_of_week(week: i64, semester_start_date: NaiveDate) -> Vec<NaiveDate> {
     let Some(first) = week_start(week, semester_start_date) else {
         return Vec::new();
@@ -102,7 +101,6 @@ pub fn dates_of_week(week: i64, semester_start_date: NaiveDate) -> Vec<NaiveDate
         .collect()
 }
 
-#[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn day_of_week(date: NaiveDate) -> DayOfWeek {
     match date.weekday() {
         Weekday::Sun => DayOfWeek::Sunday,
@@ -116,7 +114,6 @@ pub fn day_of_week(date: NaiveDate) -> DayOfWeek {
 }
 
 /// 根据长沙当地日期判断学期状态。
-#[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn semester_status(
     semester_start_date: NaiveDate,
     date: NaiveDate,

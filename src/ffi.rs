@@ -4,8 +4,13 @@ use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, TimeDelta, Utc};
 use url::Url;
 
 use crate::{
-    ConnectionMode, CsustSession, campus_card::CampusCardHelper, chaoxing::ChaoxingHelper,
-    edu::EduHelper, mooc::MoocHelper, physics_experiment::PhysicsExperimentHelper, sso::SsoHelper,
+    ConnectionMode, CsustSession,
+    campus_card::CampusCardHelper,
+    chaoxing::ChaoxingHelper,
+    edu::{EduError, EduHelper},
+    mooc::MoocHelper,
+    physics_experiment::PhysicsExperimentHelper,
+    sso::SsoHelper,
 };
 
 mod labels;
@@ -25,16 +30,33 @@ pub struct CalendarDate {
     pub day: u32,
 }
 
-uniffi::custom_type!(NaiveDate, CalendarDate, {
-    remote,
-    lower: |date| CalendarDate {
-        year: date.year(),
-        month: date.month(),
-        day: date.day(),
-    },
-    try_lift: |date| NaiveDate::from_ymd_opt(date.year, date.month, date.day)
-        .ok_or_else(|| uniffi::deps::anyhow::anyhow!("无效的公历日期")),
-});
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum CalendarDateError {
+    #[error("无效的公历日期：{year} 年 {month} 月 {day} 日")]
+    InvalidDate { year: i32, month: u32, day: u32 },
+}
+
+impl From<NaiveDate> for CalendarDate {
+    fn from(date: NaiveDate) -> Self {
+        Self {
+            year: date.year(),
+            month: date.month(),
+            day: date.day(),
+        }
+    }
+}
+
+impl TryFrom<CalendarDate> for NaiveDate {
+    type Error = CalendarDateError;
+
+    fn try_from(CalendarDate { year, month, day }: CalendarDate) -> Result<Self, Self::Error> {
+        Self::from_ymd_opt(year, month, day).ok_or(CalendarDateError::InvalidDate {
+            year,
+            month,
+            day,
+        })
+    }
+}
 
 type UtcDateTime = DateTime<Utc>;
 
@@ -160,6 +182,19 @@ impl EduHelper {
     #[uniffi::constructor(name = "new")]
     pub fn with_shared_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
         Arc::new(Self::new(mode, session.as_ref().clone()))
+    }
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+impl EduHelper {
+    #[uniffi::method(name = "get_semester_start_date")]
+    async fn get_semester_start_calendar_date(
+        &self,
+        academic_year_semester: Option<String>,
+    ) -> Result<CalendarDate, EduError> {
+        self.get_semester_start_date(academic_year_semester)
+            .await
+            .map(CalendarDate::from)
     }
 }
 
