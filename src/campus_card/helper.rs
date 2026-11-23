@@ -24,6 +24,7 @@ const TOKEN_AUTHORIZATION: &str =
     "Basic bW9iaWxlX3NlcnZpY2VfcGxhdGZvcm06bW9iaWxlX3NlcnZpY2VfcGxhdGZvcm1fc2VjcmV0";
 const QUERY_AUTHORIZATION: &str = "Y2hhcmdlOmNoYXJnZV9zZWNyZXQ=";
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct CampusCardHelper {
     mode: ConnectionMode,
     session: CsustSession,
@@ -38,7 +39,10 @@ impl CampusCardHelper {
             token: RwLock::new(None),
         }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl CampusCardHelper {
     /// 返回当前 token 的快照。
     pub fn token(&self) -> Option<String> {
         match self.token.read() {
@@ -209,7 +213,9 @@ impl CampusCardHelper {
         self.set_token(None);
         Ok(())
     }
+}
 
+impl CampusCardHelper {
     fn required_token(&self) -> Result<String, CampusCardError> {
         self.token().ok_or(CampusCardError::NotLoggedIn)
     }

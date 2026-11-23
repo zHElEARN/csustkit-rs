@@ -12,6 +12,7 @@ const USER_AGENT: &str = concat!("csustkit-rs/", env!("CARGO_PKG_VERSION"));
 const CONNECTION_AND_READ_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum SessionRequestError {
     #[error("请求连续 {attempts} 次返回空响应: {url}")]
     EmptyResponse { url: Url, attempts: u8 },
@@ -39,7 +40,10 @@ impl CsustSession {
     pub fn builder() -> CsustSessionBuilder {
         CsustSessionBuilder::default()
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+impl CsustSession {
     pub fn export_cookies(&self) -> Vec<SessionCookie> {
         self.cookie_jar.export()
     }

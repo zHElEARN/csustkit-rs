@@ -43,6 +43,7 @@ pub struct SsoLoginForm {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct SsoProfile {
     pub category_name: String,
     pub user_account: String,

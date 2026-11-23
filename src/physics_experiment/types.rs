@@ -6,6 +6,11 @@ use crate::DayOfWeek;
 /// 一次已排定的物理实验。
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "PhysicsExperimentCourse")
+)]
 pub struct Course {
     pub id: i64,
     pub name: String,
@@ -22,6 +27,11 @@ pub struct Course {
 /// 一个物理实验项目的成绩，分项成绩可能尚未录入。
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "PhysicsExperimentCourseGrade")
+)]
 pub struct CourseGrade {
     pub course_code: String,
     pub course_name: String,
@@ -33,6 +43,7 @@ pub struct CourseGrade {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum PhysicsExperimentError {
     #[error("大物实验平台未确认登录成功（HTTP {0}）")]
     LoginFailed(reqwest::StatusCode),

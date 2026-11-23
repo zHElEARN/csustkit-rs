@@ -4,6 +4,7 @@ const WEBVPN_BASE: &str = "https://vpn.csust.edu.cn";
 const WEBVPN_PREFIX: &str = "webvpn";
 
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum ServiceDomain {
     AuthServer,
     CampusCard,
@@ -58,6 +59,7 @@ impl ServiceDomain {
     }
 }
 
+#[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn make_url(mode: ConnectionMode, domain: ServiceDomain, path: &str) -> String {
     let safe_path = if path.starts_with('/') {
         path.to_owned()

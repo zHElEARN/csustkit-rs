@@ -7,12 +7,14 @@ use url::Url;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct SessionCookie {
     pub origin: String,
     pub set_cookie: String,
 }
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum SessionCookieError {
     #[error("Cookie {index} 的来源 URL 无效")]
     InvalidOrigin { index: usize },

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::Campus;
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum CampusCardError {
     #[error("个人信息获取失败: {0}")]
     ProfileRetrievalFailed(String),
@@ -21,6 +22,7 @@ pub enum CampusCardError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct Building {
     pub name: String,
     pub id: String,
@@ -28,6 +30,7 @@ pub struct Building {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct Room {
     pub name: String,
     pub id: String,
@@ -36,6 +39,11 @@ pub struct Room {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "CampusCardProfile")
+)]
 pub struct Profile {
     pub id: i64,
     pub account: String,

@@ -10,6 +10,7 @@ const WEBVPN_IV: &[u8; 16] = b"CASB2021EnLink!!";
 const WEBVPN_PREFIX: &str = "webvpn";
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum WebVpnError {
     #[error("URL 加密失败: {0}")]
     UrlEncryptionFailed(String),
@@ -105,6 +106,22 @@ pub fn webvpn_decrypt_url(url: Url) -> Result<Url, WebVpnError> {
     let original_url = Url::parse(&original_url)
         .map_err(|_| WebVpnError::UrlDecryptionFailed("无法构建解密后的 URL".to_owned()))?;
     Ok(original_url)
+}
+
+#[cfg(feature = "uniffi")]
+#[uniffi::export(name = "webvpn_encrypt_url")]
+fn encrypt_url_string(url: &str) -> Result<String, WebVpnError> {
+    let url =
+        Url::parse(url).map_err(|error| WebVpnError::UrlEncryptionFailed(error.to_string()))?;
+    webvpn_encrypt_url(url).map(Into::into)
+}
+
+#[cfg(feature = "uniffi")]
+#[uniffi::export(name = "webvpn_decrypt_url")]
+fn decrypt_url_string(url: &str) -> Result<String, WebVpnError> {
+    let url =
+        Url::parse(url).map_err(|error| WebVpnError::UrlDecryptionFailed(error.to_string()))?;
+    webvpn_decrypt_url(url).map(Into::into)
 }
 
 fn encrypt_host(text: &str) -> Result<String, WebVpnError> {

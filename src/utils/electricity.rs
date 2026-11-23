@@ -7,12 +7,14 @@ use serde::{Deserialize, Serialize};
 
 /// 一次宿舍剩余电量读数。
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ElectricityRecord {
     pub date: DateTime<Utc>,
     pub electricity: f64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ValueRangeOptions {
     pub padding: f64,
     pub minimum_span: f64,
@@ -29,9 +31,16 @@ impl Default for ValueRangeOptions {
     }
 }
 
+#[cfg(feature = "uniffi")]
+#[uniffi::export]
+fn default_electricity_value_range_options() -> ValueRangeOptions {
+    ValueRangeOptions::default()
+}
+
 /// 使用最后一次充值后、最近 14 天内的首尾读数预测耗尽时间。
 ///
 /// 读数按时间升序排列。跨度不足一天、当前电量不为正数或电量未下降时返回 `None`。
+#[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn predict_exhaustion_date(records: &[ElectricityRecord]) -> Option<DateTime<Utc>> {
     let last = records.last()?;
     if !last.electricity.is_finite() || last.electricity <= 0.0 {
@@ -68,6 +77,7 @@ pub fn predict_exhaustion_date(records: &[ElectricityRecord]) -> Option<DateTime
 ///
 /// 读数按时间升序排列。目标数量非正数或大于等于读数数量时原样返回。
 /// 目标数量为 1 或 2 时，仍保留首尾两个端点。
+#[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn downsample(records: &[ElectricityRecord], threshold: i64) -> Vec<ElectricityRecord> {
     let Ok(threshold) = usize::try_from(threshold) else {
         return records.to_vec();
@@ -126,6 +136,7 @@ pub fn downsample(records: &[ElectricityRecord], threshold: i64) -> Vec<Electric
 }
 
 /// 根据读数范围计算纵轴值域。下界不小于 0，空输入使用备用值域。
+#[cfg_attr(feature = "uniffi", uniffi::export)]
 pub fn value_range(
     records: &[ElectricityRecord],
     options: ValueRangeOptions,

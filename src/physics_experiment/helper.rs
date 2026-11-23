@@ -18,6 +18,7 @@ const GRADES_PATH: &str = "/Student/GeneralCourseScore.aspx";
 const SCHOOL_OFFSET: FixedOffset = FixedOffset::east_opt(8 * 60 * 60).unwrap();
 
 /// 使用独立的物理实验账号访问课表和成绩。
+#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct PhysicsExperimentHelper {
     mode: ConnectionMode,
     session: CsustSession,
@@ -27,7 +28,10 @@ impl PhysicsExperimentHelper {
     pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl PhysicsExperimentHelper {
     /// 登录物理实验平台。WebVPN 模式下应先在共享会话中登录 WebVPN。
     pub async fn login(
         &self,
@@ -86,7 +90,9 @@ impl PhysicsExperimentHelper {
         perform_request::<PhysicsExperimentError>(self.session.client.get(url), None).await?;
         Ok(())
     }
+}
 
+impl PhysicsExperimentHelper {
     async fn get(&self, path: &str) -> Result<RequestResponse, PhysicsExperimentError> {
         let url = make_url(self.mode, ServiceDomain::PhysicsExperiment, path);
         perform_request(

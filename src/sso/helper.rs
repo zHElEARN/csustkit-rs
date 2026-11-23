@@ -157,9 +157,7 @@ impl SsoHelper {
             Err(login_failure_from_body(&body, final_url))
         }
     }
-}
 
-impl SsoHelper {
     /// 获取当前统一身份认证会话的用户资料。
     pub async fn get_profile(&self) -> Result<SsoProfile, SsoError> {
         let url = make_url(self.mode, ServiceDomain::Ehall, "/getLoginUser");
@@ -180,10 +178,7 @@ impl SsoHelper {
 
         extract_campus_card_ticket(&response.final_url, &expected_prefix)
     }
-}
 
-#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
-impl SsoHelper {
     /// 从已登录的统一身份认证会话登录网络课程中心。
     pub async fn login_to_mooc(&self) -> Result<(), SsoError> {
         let url = make_url(self.mode, ServiceDomain::Mooc, MOOC_LOGIN_PATH);
@@ -239,9 +234,7 @@ impl SsoHelper {
             Ok(())
         }
     }
-}
 
-impl SsoHelper {
     pub async fn is_logged_in(&self) -> bool {
         self.get_profile().await.is_ok()
     }
@@ -267,7 +260,9 @@ impl SsoHelper {
             .await?;
         Ok(())
     }
+}
 
+impl SsoHelper {
     fn login_check(&self) -> LoginCheck<SsoError> {
         LoginCheck {
             mode: self.mode,

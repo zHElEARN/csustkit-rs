@@ -9,6 +9,7 @@ use crate::edu::CourseGrade;
 /// 一个百分制成绩档位及其对应绩点。
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GradeScale {
     pub min_grade: i64,
     pub max_grade: i64,
@@ -38,7 +39,10 @@ impl GradeScale {
             grade_point,
         }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export)]
+impl GradeScale {
     /// 显示用的成绩段，例如 `90-100` 或 `≤59`。
     pub fn display_range(self) -> String {
         if self.min_grade <= 0 {
@@ -47,7 +51,9 @@ impl GradeScale {
             format!("{}-{}", self.min_grade, self.max_grade)
         }
     }
+}
 
+impl GradeScale {
     /// 查询百分制成绩对应的绩点。
     pub fn grade_point(grade: i64) -> Option<f64> {
         Self::STANDARD
@@ -67,6 +73,7 @@ impl GradeScale {
 /// 一个学期的算术平均分和学分加权 GPA。
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct SemesterSummary {
     pub semester: String,
     pub average_grade: f64,
@@ -76,6 +83,7 @@ pub struct SemesterSummary {
 /// 具有同一绩点的课程数。
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GradePointBucket {
     pub grade_point: f64,
     pub count: usize,
@@ -83,6 +91,7 @@ pub struct GradePointBucket {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GradeStatistics {
     pub total_courses: usize,
     pub total_hours: f64,
@@ -133,6 +142,33 @@ impl GradeStatistics {
                 .collect(),
         }
     }
+}
+
+#[cfg(feature = "uniffi")]
+#[uniffi::export]
+fn standard_grade_scales() -> Vec<GradeScale> {
+    GradeScale::STANDARD.to_vec()
+}
+
+/// 查询百分制成绩对应的绩点。
+#[cfg(feature = "uniffi")]
+#[uniffi::export]
+fn grade_point(grade: i64) -> Option<f64> {
+    GradeScale::grade_point(grade)
+}
+
+/// 查询绩点对应的档位。
+#[cfg(feature = "uniffi")]
+#[uniffi::export]
+fn scale_for_grade_point(point: f64) -> Option<GradeScale> {
+    GradeScale::scale_for_grade_point(point)
+}
+
+/// 按教务返回的成绩、学分和绩点计算统计结果。
+#[cfg(feature = "uniffi")]
+#[uniffi::export]
+fn grade_statistics(course_grades: &[CourseGrade]) -> GradeStatistics {
+    GradeStatistics::from_course_grades(course_grades)
 }
 
 #[derive(Default)]
