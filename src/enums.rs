@@ -11,6 +11,19 @@ pub enum Campus {
 impl Campus {
     pub const ALL: [Self; 2] = [Self::Yuntang, Self::Jinpenling];
 
+    /// 校区简称，例如 `云塘`。
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Yuntang => "云塘",
+            Self::Jinpenling => "金盆岭",
+        }
+    }
+
+    /// 根据校区简称查找校区。
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|campus| campus.name() == name)
+    }
+
     pub const fn display_name(self) -> &'static str {
         match self {
             Self::Yuntang => "云塘校区",
