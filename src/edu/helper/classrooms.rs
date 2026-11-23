@@ -23,28 +23,14 @@ impl EduHelper {
         &self,
         query: ClassroomScheduleQuery,
     ) -> Result<Vec<ClassroomScheduleSession>, EduError> {
-        if query
-            .weeks
-            .as_ref()
-            .is_some_and(|range| range.is_empty() || *range.start() < 1)
-        {
-            return Err(classroom_error("周次范围必须为正数且起始周不晚于结束周"));
-        }
-        if query
-            .weekdays
-            .as_ref()
-            .is_some_and(|range| range.is_empty() || *range.start() < 1 || *range.end() > 7)
-        {
-            return Err(classroom_error(
-                "星期范围必须在 1 至 7 之间且起始日不晚于结束日",
-            ));
-        }
-        if query
-            .sections
-            .as_ref()
-            .is_some_and(|range| range.is_empty() || *range.start() < 1)
-        {
-            return Err(classroom_error("节次范围必须为正数且起始节不晚于结束节"));
+        for (field, range) in [
+            ("周次", query.weeks.as_ref()),
+            ("星期", query.weekdays.as_ref()),
+            ("节次", query.sections.as_ref()),
+        ] {
+            if range.is_some_and(RangeInclusive::is_empty) {
+                return Err(classroom_error(format!("{field}范围的起点不能大于终点")));
+            }
         }
 
         let campus_id = match query.campus {
