@@ -21,15 +21,12 @@ pub enum SessionRequestError {
 
 /// Shared HTTP state for CSUST services.
 ///
-/// The two clients use the same cookie jar: one follows redirects for normal
-/// requests, while the other lets SSO inspect each redirect explicitly. Clones
-/// share the same cookie jar and therefore the same login state.
-/// Both clients time out after 60 seconds of connecting or waiting for
+/// Clones share the HTTP client and cookie jar, including the login state.
+/// The client times out after 60 seconds of connecting or waiting for
 /// response data. Each successful read resets the read timeout.
 #[derive(Clone)]
 pub struct CsustSession {
     pub(crate) client: Client,
-    pub(crate) no_redirect_client: Client,
     cookie_jar: Arc<SessionCookieJar>,
 }
 
@@ -74,22 +71,16 @@ impl CsustSessionBuilder {
 
     pub fn build(self) -> Result<CsustSession, reqwest::Error> {
         let cookie_jar = Arc::new(SessionCookieJar::default());
-        let build_client = |redirect| {
-            Client::builder()
-                .connect_timeout(CONNECTION_AND_READ_TIMEOUT)
-                .read_timeout(CONNECTION_AND_READ_TIMEOUT)
-                .cookie_provider(Arc::clone(&cookie_jar))
-                .redirect(redirect)
-                .user_agent(self.user_agent.as_deref().unwrap_or(USER_AGENT))
-                .tls_certs_merge(self.root_certificates.iter().cloned())
-                .build()
-        };
+        let client = Client::builder()
+            .connect_timeout(CONNECTION_AND_READ_TIMEOUT)
+            .read_timeout(CONNECTION_AND_READ_TIMEOUT)
+            .cookie_provider(Arc::clone(&cookie_jar))
+            .redirect(Policy::limited(10))
+            .user_agent(self.user_agent.as_deref().unwrap_or(USER_AGENT))
+            .tls_certs_merge(self.root_certificates)
+            .build()?;
 
-        Ok(CsustSession {
-            client: build_client(Policy::limited(10))?,
-            no_redirect_client: build_client(Policy::none())?,
-            cookie_jar,
-        })
+        Ok(CsustSession { client, cookie_jar })
     }
 }
 

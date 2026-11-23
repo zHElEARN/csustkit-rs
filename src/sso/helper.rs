@@ -1,5 +1,4 @@
 use encoding_rs::UTF_8;
-use reqwest::{Response, header::LOCATION};
 use url::Url;
 
 use crate::{
@@ -42,7 +41,10 @@ impl SsoHelper {
 
     pub async fn get_login_form(&self) -> Result<SsoLoginForm, SsoError> {
         let response = self
-            .get_following_redirects(make_url(self.mode, ServiceDomain::AuthServer, LOGIN_PATH))
+            .session
+            .client
+            .get(make_url(self.mode, ServiceDomain::AuthServer, LOGIN_PATH))
+            .send()
             .await?;
 
         let final_url = response.url().clone();
@@ -53,7 +55,7 @@ impl SsoHelper {
             return Err(SsoError::GetLoginFormFailed("账号已登录".to_owned()));
         }
 
-        let body = response.text().await.map_err(login_form_request_error)?;
+        let body = response.text().await?;
         check_need_improve_user_info(&body, &final_url)?;
         parse_login_form(&body)
     }
@@ -254,9 +256,7 @@ impl SsoHelper {
             .await?;
         Ok(())
     }
-}
 
-impl SsoHelper {
     fn login_check(&self) -> LoginCheck<SsoError> {
         LoginCheck {
             mode: self.mode,
@@ -264,41 +264,6 @@ impl SsoHelper {
             subsystem_login: |_, final_url| final_url.path().ends_with("/authserver/login"),
             not_logged_in: SsoError::NotLoggedIn,
         }
-    }
-
-    async fn get_following_redirects(&self, initial_url: String) -> Result<Response, SsoError> {
-        let mut url = initial_url;
-        for _ in 0..10 {
-            let response = self
-                .session
-                .no_redirect_client
-                .get(&url)
-                .send()
-                .await
-                .map_err(login_form_request_error)?;
-
-            if !response.status().is_redirection() {
-                return Ok(response);
-            }
-
-            let next_url = response
-                .headers()
-                .get(LOCATION)
-                .and_then(|value| value.to_str().ok())
-                .and_then(|location| response.url().join(location).ok())
-                .ok_or_else(|| SsoError::GetLoginFormFailed("无响应数据".to_owned()))?;
-            url = next_url.to_string();
-        }
-
-        Err(SsoError::GetLoginFormFailed("无响应数据".to_owned()))
-    }
-}
-
-fn login_form_request_error(error: reqwest::Error) -> SsoError {
-    if error.is_timeout() {
-        error.into()
-    } else {
-        SsoError::GetLoginFormFailed("无响应数据".to_owned())
     }
 }
 
