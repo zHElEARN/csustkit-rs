@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Days, NaiveDate};
 use reqwest::header::CONTENT_TYPE;
 use scraper::{Html, Selector};
 use url::form_urlencoded;
@@ -66,23 +66,28 @@ fn parse_semester_start_date(body: &str) -> Result<NaiveDate, EduError> {
         .ok_or_else(|| semester_start_date_error("未找到学期首日表"))?;
     let row_selector = Selector::parse("tr")
         .map_err(|error| semester_start_date_error(format!("解析学期首日行选择器失败: {error}")))?;
-    let rows = table.select(&row_selector).collect::<Vec<_>>();
-    let target_row = rows
-        .get(1)
+    let second_week_row = table
+        .select(&row_selector)
+        .nth(2)
         .ok_or_else(|| semester_start_date_error("学期首日表行数不足"))?;
     let cell_selector = Selector::parse("td")
         .map_err(|error| semester_start_date_error(format!("解析学期首日列选择器失败: {error}")))?;
-    let cells = target_row.select(&cell_selector).collect::<Vec<_>>();
-    let start_date_text = cells
-        .get(1)
+    let second_week_date_text = second_week_row
+        .select(&cell_selector)
+        .nth(1)
         .ok_or_else(|| semester_start_date_error("目标行列数不足"))?
         .value()
         .attr("title")
         .unwrap_or_default()
         .trim();
 
-    NaiveDate::parse_from_str(start_date_text, "%Y年%m月%d")
-        .map_err(|_| semester_start_date_error(format!("无法解析学期首日: {start_date_text}")))
+    let second_week_date =
+        NaiveDate::parse_from_str(second_week_date_text, "%Y年%m月%d").map_err(|_| {
+            semester_start_date_error(format!("无法解析第二周周日日期: {second_week_date_text}"))
+        })?;
+    second_week_date
+        .checked_sub_days(Days::new(7))
+        .ok_or_else(|| semester_start_date_error("无法回推学期首日"))
 }
 
 fn parse_available_semesters_for_start_date(body: &str) -> Result<SemesterOptions, EduError> {
