@@ -5,12 +5,22 @@ use url::Url;
 use crate::WebVpnError;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "ChaoxingProfile")
+)]
 pub struct Profile {
     pub name: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Enum),
+    uniffi(name = "ChaoxingAssignmentStatus")
+)]
 pub enum AssignmentStatus {
     Unsubmitted,
     PendingReview,
@@ -37,6 +47,11 @@ impl AssignmentStatus {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "ChaoxingAssignment")
+)]
 pub struct Assignment {
     pub title: String,
     pub status: AssignmentStatus,
@@ -49,6 +64,7 @@ pub struct Assignment {
     pub detail_url: Url,
 }
 
+#[cfg_attr(feature = "uniffi", uniffi::export(name = "ChaoxingAssignment"))]
 impl Assignment {
     pub const fn is_completed(&self) -> bool {
         matches!(self.status, AssignmentStatus::Completed)
@@ -56,6 +72,7 @@ impl Assignment {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum ChaoxingError {
     #[error("获取学习通个人信息失败: {0}")]
     ProfileRetrievalFailed(String),

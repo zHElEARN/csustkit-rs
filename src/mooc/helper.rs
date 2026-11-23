@@ -46,6 +46,7 @@ struct AssignmentResponse {
     answer_status: Option<bool>,
 }
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct MoocHelper {
     mode: ConnectionMode,
     session: CsustSession,
@@ -55,7 +56,10 @@ impl MoocHelper {
     pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl MoocHelper {
     pub async fn get_profile(&self) -> Result<Profile, MoocError> {
         let response = self.get_gbk(PROFILE_PATH).await?;
 
@@ -315,7 +319,9 @@ impl MoocHelper {
     pub async fn is_logged_in(&self) -> bool {
         self.get_profile().await.is_ok()
     }
+}
 
+impl MoocHelper {
     async fn get_gbk(&self, path: &str) -> Result<String, MoocError> {
         let response = self.get(path, GBK).await?;
         Ok(GBK.decode(&response.body).0.into_owned())

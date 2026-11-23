@@ -180,7 +180,10 @@ impl SsoHelper {
 
         extract_campus_card_ticket(&response.final_url, &expected_prefix)
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl SsoHelper {
     /// 从已登录的统一身份认证会话登录网络课程中心。
     pub async fn login_to_mooc(&self) -> Result<(), SsoError> {
         let url = make_url(self.mode, ServiceDomain::Mooc, MOOC_LOGIN_PATH);
@@ -214,10 +217,7 @@ impl SsoHelper {
             )))
         }
     }
-}
 
-#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
-impl SsoHelper {
     /// 从已登录的统一身份认证会话登录教务系统。
     pub async fn login_to_education(&self) -> Result<(), SsoError> {
         let education_url = make_url(self.mode, ServiceDomain::Education, EDUCATION_SSO_PATH);

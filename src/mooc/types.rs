@@ -3,6 +3,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "MoocProfile")
+)]
 pub struct Profile {
     pub name: String,
     pub last_login_time: String,
@@ -12,6 +17,11 @@ pub struct Profile {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "MoocCourse")
+)]
 pub struct Course {
     pub id: String,
     pub name: String,
@@ -22,6 +32,11 @@ pub struct Course {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "MoocAssignment")
+)]
 pub struct Assignment {
     pub id: i64,
     pub title: String,
@@ -34,6 +49,7 @@ pub struct Assignment {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record), uniffi(name = "MoocExam"))]
 pub struct Exam {
     pub title: String,
     pub start_time: String,
@@ -44,6 +60,7 @@ pub struct Exam {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum MoocError {
     #[error("获取个人信息失败: {0}")]
     ProfileRetrievalFailed(String),

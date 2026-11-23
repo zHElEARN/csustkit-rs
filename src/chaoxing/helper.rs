@@ -16,6 +16,7 @@ use crate::{
 use super::{Assignment, AssignmentStatus, ChaoxingError, Profile};
 
 /// 通过共享的 SSO 会话访问学习通。
+#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct ChaoxingHelper {
     mode: ConnectionMode,
     session: CsustSession,
@@ -25,7 +26,10 @@ impl ChaoxingHelper {
     pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl ChaoxingHelper {
     pub async fn is_logged_in(&self) -> bool {
         self.get_profile().await.is_ok()
     }
@@ -127,7 +131,9 @@ impl ChaoxingHelper {
             })
             .collect()
     }
+}
 
+impl ChaoxingHelper {
     async fn get(
         &self,
         domain: ServiceDomain,
