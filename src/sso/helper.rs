@@ -1,10 +1,11 @@
 use encoding_rs::UTF_8;
+use reqwest::StatusCode;
 use url::Url;
 
 use crate::{
     connection::ConnectionMode,
-    request::{LoginCheck, perform_request, send_with_retry},
-    session::CsustSession,
+    request::{LoginCheck, perform_request},
+    session::{CsustSession, SessionRequestError},
     url_factory::{ServiceDomain, make_url},
 };
 
@@ -216,23 +217,27 @@ impl SsoHelper {
     /// 从已登录的统一身份认证会话登录教务系统。
     pub async fn login_to_education(&self) -> Result<(), SsoError> {
         let education_url = make_url(self.mode, ServiceDomain::Education, EDUCATION_SSO_PATH);
-        send_with_retry(
-            || self.session.client.get(&education_url),
-            || self.login_check(),
+        let response = perform_request(
+            self.session.client.get(education_url),
+            Some(self.login_check()),
         )
         .await?;
+        if response.body.is_empty()
+            && !matches!(
+                response.status,
+                StatusCode::NO_CONTENT | StatusCode::RESET_CONTENT
+            )
+        {
+            return Err(SessionRequestError::EmptyResponse {
+                url: response.final_url,
+                attempts: 1,
+            }
+            .into());
+        }
 
         let login_url = make_url(self.mode, ServiceDomain::AuthServer, EDUCATION_LOGIN_PATH);
-        let response = send_with_retry(
-            || self.session.client.get(&login_url),
-            || self.login_check(),
-        )
-        .await?;
-        if response.text().contains("账号登录") {
-            Err(SsoError::NotLoggedIn)
-        } else {
-            Ok(())
-        }
+        perform_request(self.session.client.get(login_url), Some(self.login_check())).await?;
+        Ok(())
     }
 
     pub async fn is_logged_in(&self) -> bool {
