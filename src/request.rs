@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, time::Duration};
 
 use encoding_rs::{Encoding, UTF_8};
 use reqwest::{
@@ -6,11 +6,14 @@ use reqwest::{
     header::{CONTENT_TYPE, HeaderMap},
 };
 use serde::de::DeserializeOwned;
+use tokio::time::sleep;
 use url::Url;
 
-use crate::ConnectionMode;
+use crate::{ConnectionMode, SessionRequestError};
 
 const WEBVPN_LOGIN_MARKER: &str = "window.location.href = './start.html";
+const MAX_EMPTY_RESPONSE_RETRIES: u8 = 5;
+const EMPTY_RESPONSE_RETRY_DELAY: Duration = Duration::from_secs(1);
 
 pub(crate) struct LoginCheck<E> {
     pub(crate) mode: ConnectionMode,
@@ -80,4 +83,32 @@ where
     }
 
     Ok(response)
+}
+
+pub(crate) async fn send_with_retry<E>(
+    build_request: impl Fn() -> RequestBuilder,
+    login_check: impl Fn() -> LoginCheck<E>,
+) -> Result<RequestResponse, E>
+where
+    E: From<reqwest::Error> + From<SessionRequestError>,
+{
+    let mut retries = 0_u8;
+    loop {
+        let response = perform_request(build_request(), Some(login_check())).await?;
+
+        if !response.body.is_empty() {
+            return Ok(response);
+        }
+
+        if retries >= MAX_EMPTY_RESPONSE_RETRIES {
+            return Err(SessionRequestError::EmptyResponse {
+                url: response.final_url,
+                attempts: retries + 1,
+            }
+            .into());
+        }
+
+        retries += 1;
+        sleep(EMPTY_RESPONSE_RETRY_DELAY).await;
+    }
 }

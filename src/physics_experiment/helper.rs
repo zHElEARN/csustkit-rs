@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::{DateTime, FixedOffset, NaiveDateTime, NaiveTime};
 use encoding_rs::UTF_8;
@@ -22,17 +20,12 @@ const SCHOOL_OFFSET: FixedOffset = FixedOffset::east_opt(8 * 60 * 60).unwrap();
 /// 使用独立的物理实验账号访问课表和成绩。
 pub struct PhysicsExperimentHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
 }
 
 impl PhysicsExperimentHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, PhysicsExperimentError> {
-        let session = CsustSession::new().map_err(PhysicsExperimentError::ClientBuildFailed)?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self { mode, session })
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self { mode, session }
     }
 
     /// 登录物理实验平台。WebVPN 模式下应先在共享会话中登录 WebVPN。

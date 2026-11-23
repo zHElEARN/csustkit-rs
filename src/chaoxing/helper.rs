@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::SystemTime};
+use std::time::SystemTime;
 
 use chrono::{DateTime, TimeDelta, Utc};
 use encoding_rs::UTF_8;
@@ -18,17 +18,12 @@ use super::{Assignment, AssignmentStatus, ChaoxingError, Profile};
 /// 通过共享的 SSO 会话访问学习通。
 pub struct ChaoxingHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
 }
 
 impl ChaoxingHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, ChaoxingError> {
-        let session = CsustSession::new().map_err(ChaoxingError::ClientBuildFailed)?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self { mode, session })
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self { mode, session }
     }
 
     pub async fn is_logged_in(&self) -> bool {

@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::time::SystemTimeError;
 
-use crate::edu::EducationRequestError;
+use crate::SessionRequestError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SsoError {
-    #[error("SSO 客户端创建失败: {0}")]
-    ClientBuildFailed(String),
     #[error("获取登录表单失败: {0}")]
     GetLoginFormFailed(String),
     #[error("验证码获取失败")]
@@ -22,7 +20,7 @@ pub enum SsoError {
     #[error("超星学习通登录失败: {0}")]
     LoginToChaoxingFailed(String),
     #[error("教务 SSO 请求失败: {0}")]
-    EducationRequest(#[from] EducationRequestError),
+    SessionRequest(#[from] SessionRequestError),
     #[error("统一身份认证未登录")]
     NotLoggedIn,
     #[error("统一身份认证用户信息解析失败: {0}")]

@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use encoding_rs::UTF_8;
 use reqwest::RequestBuilder;
@@ -9,12 +6,12 @@ use scraper::ElementRef;
 
 use crate::{
     connection::ConnectionMode,
-    request::{LoginCheck, RequestResponse},
+    request::{LoginCheck, RequestResponse, send_with_retry},
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
 
-use super::{request::send_with_retry, types::EduError};
+use super::types::EduError;
 
 mod classrooms;
 mod exams;
@@ -25,18 +22,12 @@ mod semester;
 
 pub struct EduHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
 }
 
 impl EduHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, EduError> {
-        let session =
-            CsustSession::new().map_err(|error| EduError::ClientBuildFailed(error.to_string()))?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self { mode, session })
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self { mode, session }
     }
 
     pub async fn is_logged_in(&self) -> bool {

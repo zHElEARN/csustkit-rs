@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use encoding_rs::UTF_8;
 use reqwest::{
     Response,
@@ -9,8 +7,7 @@ use url::Url;
 
 use crate::{
     connection::ConnectionMode,
-    edu::request::send_with_retry,
-    request::{LoginCheck, perform_request},
+    request::{LoginCheck, perform_request, send_with_retry},
     session::CsustSession,
     url_factory::{ServiceDomain, make_url},
 };
@@ -38,18 +35,12 @@ const WEBVPN_CAS_CHECK_URL: &str =
 
 pub struct SsoHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
 }
 
 impl SsoHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, SsoError> {
-        let session =
-            CsustSession::new().map_err(|error| SsoError::ClientBuildFailed(error.to_string()))?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self { mode, session })
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self { mode, session }
     }
 
     pub async fn get_login_form(&self) -> Result<SsoLoginForm, SsoError> {

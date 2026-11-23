@@ -5,15 +5,7 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{Campus, DayOfWeek};
-
-#[derive(Debug, thiserror::Error)]
-pub enum EducationRequestError {
-    #[error("教务请求连续 {attempts} 次返回空响应: {url}")]
-    EmptyResponse { url: Url, attempts: u8 },
-    #[error(transparent)]
-    Network(#[from] reqwest::Error),
-}
+use crate::{Campus, DayOfWeek, SessionRequestError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -313,10 +305,8 @@ pub struct GradeDetail {
 
 #[derive(Debug, thiserror::Error)]
 pub enum EduError {
-    #[error("教务客户端创建失败: {0}")]
-    ClientBuildFailed(String),
     #[error("教务请求失败: {0}")]
-    EducationRequest(#[from] EducationRequestError),
+    SessionRequest(#[from] SessionRequestError),
     #[error("个人信息获取失败: {0}")]
     ProfileRetrievalFailed(String),
     #[error("课程成绩获取失败: {0}")]
@@ -351,6 +341,6 @@ pub enum EduError {
 
 impl From<reqwest::Error> for EduError {
     fn from(error: reqwest::Error) -> Self {
-        Self::EducationRequest(error.into())
+        Self::SessionRequest(error.into())
     }
 }

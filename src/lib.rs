@@ -14,5 +14,5 @@ pub mod webvpn;
 
 pub use connection::ConnectionMode;
 pub use enums::{Campus, DayOfWeek};
-pub use session::CsustSession;
+pub use session::{CsustSession, SessionRequestError};
 pub use webvpn::{WebVpnError, webvpn_decrypt_url, webvpn_encrypt_url};

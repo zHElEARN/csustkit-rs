@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use csustkit::{
     mooc::{MoocError, MoocHelper},
     sso::SsoHelper,
@@ -7,7 +5,7 @@ use csustkit::{
 
 use super::{console, formatting};
 
-pub async fn run_menu(mooc: Arc<MoocHelper>, sso: Arc<SsoHelper>) {
+pub async fn run_menu(mooc: &MoocHelper, sso: &SsoHelper) {
     if let Err(error) = sso.login_to_mooc().await {
         println!("进入网络课程中心失败: {error}");
         return;
@@ -24,11 +22,11 @@ pub async fn run_menu(mooc: Arc<MoocHelper>, sso: Arc<SsoHelper>) {
             return;
         };
         let result = match choice.as_str() {
-            "1" => profile(&mooc).await,
-            "2" => courses(&mooc).await,
-            "3" => pending(&mooc).await,
-            "4" => course_detail(&mooc, true).await,
-            "5" => course_detail(&mooc, false).await,
+            "1" => profile(mooc).await,
+            "2" => courses(mooc).await,
+            "3" => pending(mooc).await,
+            "4" => course_detail(mooc, true).await,
+            "5" => course_detail(mooc, false).await,
             "0" => return,
             _ => {
                 println!("输入无效，请重新选择。");

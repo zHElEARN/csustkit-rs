@@ -55,8 +55,6 @@ impl Assignment {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ChaoxingError {
-    #[error("学习通客户端创建失败: {0}")]
-    ClientBuildFailed(#[source] reqwest::Error),
     #[error("获取学习通个人信息失败: {0}")]
     ProfileRetrievalFailed(String),
     #[error("获取学习通作业失败: {0}")]

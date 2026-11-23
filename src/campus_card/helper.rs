@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 
 use encoding_rs::UTF_8;
 use reqwest::RequestBuilder;
@@ -26,23 +26,17 @@ const QUERY_AUTHORIZATION: &str = "Y2hhcmdlOmNoYXJnZV9zZWNyZXQ=";
 
 pub struct CampusCardHelper {
     mode: ConnectionMode,
-    session: Arc<CsustSession>,
+    session: CsustSession,
     token: RwLock<Option<String>>,
 }
 
 impl CampusCardHelper {
-    pub fn new(mode: ConnectionMode) -> Result<Arc<Self>, CampusCardError> {
-        let session = CsustSession::new()
-            .map_err(|error| CampusCardError::ClientBuildFailed(error.to_string()))?;
-        Ok(Self::with_session(mode, session))
-    }
-
-    pub fn with_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self {
+    pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
+        Self {
             mode,
             session,
             token: RwLock::new(None),
-        })
+        }
     }
 
     /// 返回当前 token 的快照。

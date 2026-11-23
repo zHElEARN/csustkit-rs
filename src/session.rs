@@ -1,13 +1,24 @@
 use std::sync::Arc;
 
 use reqwest::{Client, cookie::Jar, redirect::Policy};
+use url::Url;
 
 const USER_AGENT: &str = concat!("csustkit-rs/", env!("CARGO_PKG_VERSION"));
+
+#[derive(Debug, thiserror::Error)]
+pub enum SessionRequestError {
+    #[error("请求连续 {attempts} 次返回空响应: {url}")]
+    EmptyResponse { url: Url, attempts: u8 },
+    #[error(transparent)]
+    Network(#[from] reqwest::Error),
+}
 
 /// Shared HTTP state for CSUST services.
 ///
 /// The two clients use the same cookie jar: one follows redirects for normal
-/// requests, while the other lets SSO inspect each redirect explicitly.
+/// requests, while the other lets SSO inspect each redirect explicitly. Clones
+/// share the same cookie jar and therefore the same login state.
+#[derive(Clone)]
 pub struct CsustSession {
     pub(crate) client: Client,
     pub(crate) no_redirect_client: Client,
@@ -15,7 +26,7 @@ pub struct CsustSession {
 }
 
 impl CsustSession {
-    pub fn new() -> Result<Arc<Self>, reqwest::Error> {
+    pub fn new() -> Result<Self, reqwest::Error> {
         let cookie_jar = Arc::new(Jar::default());
         let client = Client::builder()
             .cookie_provider(Arc::clone(&cookie_jar))
@@ -28,10 +39,10 @@ impl CsustSession {
             .user_agent(USER_AGENT)
             .build()?;
 
-        Ok(Arc::new(Self {
+        Ok(Self {
             client,
             no_redirect_client,
             cookie_jar,
-        }))
+        })
     }
 }

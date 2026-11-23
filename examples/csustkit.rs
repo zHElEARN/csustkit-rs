@@ -17,8 +17,6 @@ mod physics_experiment;
 #[path = "csustkit/webvpn.rs"]
 mod webvpn;
 
-use std::sync::Arc;
-
 use csustkit::{ConnectionMode, CsustSession, physics_experiment::PhysicsExperimentHelper};
 
 #[tokio::main]
@@ -43,16 +41,14 @@ async fn main() {
         match console::prompt("请选择") {
             Some(choice) => match choice.as_str() {
                 "1" => {
-                    if let Some(login) = login::run_login_demo(Arc::clone(&session)).await {
+                    if let Some(login) = login::run_login_demo(session.clone()).await {
                         login::run_main_menu(login).await;
                     }
                 }
                 "2" => webvpn::run_menu(),
                 "3" => {
-                    let helper = PhysicsExperimentHelper::with_session(
-                        ConnectionMode::Direct,
-                        Arc::clone(&session),
-                    );
+                    let helper =
+                        PhysicsExperimentHelper::new(ConnectionMode::Direct, session.clone());
                     physics_experiment::run_menu(&helper).await;
                 }
                 "0" => break,
