@@ -30,16 +30,12 @@ pub(super) struct QueryItem {
     pub(super) value: String,
 }
 
-#[allow(dead_code)]
 #[derive(Deserialize)]
 pub(super) struct RoomPowerInfo {
-    room_id: String,
     #[serde(rename = "allAmp")]
     pub(super) all_amp: String,
-    xiaoqu_id: String,
     #[serde(rename = "usedAmp")]
     pub(super) used_amp: String,
-    loudong_id: String,
 }
 
 pub(super) fn is_login_response(body: &str) -> bool {
