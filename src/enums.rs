@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 /// 长沙理工大学校区。
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum Campus {
     Yuntang,
     Jinpenling,
@@ -36,6 +37,7 @@ impl Campus {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[repr(u8)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum DayOfWeek {
     Sunday = 0,
     Monday = 1,

@@ -10,6 +10,7 @@ use super::{EduHelper, element_text};
 const EXAM_SCHEDULE_PATH: &str = "/jsxsd/xsks/xsksap_list";
 const EXAM_SCHEDULE_SEMESTERS_PATH: &str = "/jsxsd/xsks/xsksap_query";
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
 impl EduHelper {
     pub async fn get_available_semesters_for_exam_schedule(
         &self,

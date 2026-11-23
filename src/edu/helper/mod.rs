@@ -30,7 +30,10 @@ impl EduHelper {
     pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl EduHelper {
     pub async fn is_logged_in(&self) -> bool {
         self.get_profile().await.is_ok()
     }
@@ -56,6 +59,9 @@ impl EduHelper {
             .map_err(EduError::LogoutFailed)?;
         Ok(())
     }
+}
+
+impl EduHelper {
     async fn request(
         &self,
         build_request: impl Fn() -> RequestBuilder,

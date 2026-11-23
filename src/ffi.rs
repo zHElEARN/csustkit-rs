@@ -1,13 +1,62 @@
-use std::sync::Arc;
+use std::{ops::RangeInclusive, sync::Arc, time::SystemTime};
 
-use url::Url;
+use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, TimeDelta, Utc};
 
 use crate::{ConnectionMode, CsustSession, edu::EduHelper, sso::SsoHelper};
 
-uniffi::custom_type!(Url, String, {
+/// 公历日期，不含时间或时区。
+#[derive(uniffi::Record)]
+pub struct CalendarDate {
+    pub year: i32,
+    pub month: u32,
+    pub day: u32,
+}
+
+uniffi::custom_type!(NaiveDate, CalendarDate, {
     remote,
-    lower: |url| url.into(),
-    try_lift: |value| Ok(Url::parse(&value)?),
+    lower: |date| CalendarDate {
+        year: date.year(),
+        month: date.month(),
+        day: date.day(),
+    },
+    try_lift: |date| NaiveDate::from_ymd_opt(date.year, date.month, date.day)
+        .ok_or_else(|| uniffi::deps::anyhow::anyhow!("无效的公历日期")),
+});
+
+type OffsetDateTime = DateTime<FixedOffset>;
+
+uniffi::custom_type!(OffsetDateTime, SystemTime, {
+    remote,
+    lower: |date_time| date_time.into(),
+    try_lift: |time| {
+        // A foreign timestamp represents an instant. Lift it with a UTC offset.
+        let epoch = DateTime::<Utc>::UNIX_EPOCH;
+        let date_time = match time.duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(elapsed) => epoch.checked_add_signed(TimeDelta::from_std(elapsed)?),
+            Err(error) => epoch.checked_sub_signed(TimeDelta::from_std(error.duration())?),
+        };
+        date_time
+            .map(|value| value.fixed_offset())
+            .ok_or_else(|| uniffi::deps::anyhow::anyhow!("时间戳超出日期范围"))
+    },
+});
+
+/// 整数闭区间，包含起点和终点。
+#[derive(uniffi::Record)]
+pub struct InclusiveRange {
+    pub start: i64,
+    pub end: i64,
+}
+
+type InclusiveIntRange = RangeInclusive<i64>;
+
+uniffi::custom_type!(InclusiveIntRange, InclusiveRange, {
+    remote,
+    lower: |range| InclusiveRange {
+        start: *range.start(),
+        end: *range.end(),
+    },
+    try_lift: |range| Ok(range.start..=range.end),
 });
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]

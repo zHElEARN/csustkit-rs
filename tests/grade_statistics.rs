@@ -10,7 +10,7 @@ fn course(semester: &str, grade: i64, credit: f64, grade_point: f64) -> CourseGr
         course_name: "课程".to_owned(),
         group_name: String::new(),
         grade,
-        grade_detail_url: "https://example.test/grades".parse().unwrap(),
+        grade_detail_url: "https://example.test/grades".to_owned(),
         study_mode: "正常".to_owned(),
         grade_identifier: String::new(),
         credit,

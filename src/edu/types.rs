@@ -3,12 +3,16 @@ use std::time::SystemTimeError;
 
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::{Campus, DayOfWeek, SessionRequestError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(
+    feature = "uniffi",
+    derive(uniffi::Record),
+    uniffi(name = "EduProfile")
+)]
 pub struct Profile {
     pub department: String,
     pub major: String,
@@ -31,6 +35,7 @@ pub struct Profile {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ExamScheduleQuery {
     pub academic_year_semester: Option<String>,
     pub semester_type: Option<SemesterType>,
@@ -38,6 +43,7 @@ pub struct ExamScheduleQuery {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum SemesterType {
     Beginning,
     Middle,
@@ -66,6 +72,7 @@ impl SemesterType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct SemesterOptions {
     pub semesters: Vec<String>,
     pub default_semester: String,
@@ -73,6 +80,7 @@ pub struct SemesterOptions {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct CourseSchedule {
     pub courses: Vec<Course>,
     pub remarks: Vec<String>,
@@ -80,6 +88,7 @@ pub struct CourseSchedule {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record), uniffi(name = "EduCourse"))]
 pub struct Course {
     pub course_name: String,
     pub group_name: Option<String>,
@@ -89,6 +98,7 @@ pub struct Course {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ScheduleSession {
     pub weeks: Vec<i64>,
     pub start_section: i64,
@@ -100,6 +110,7 @@ pub struct ScheduleSession {
 /// 教室课表查询。范围均包含首尾。
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ClassroomScheduleQuery {
     /// 省略时查询所有校区。
     pub campus: Option<Campus>,
@@ -116,6 +127,7 @@ pub struct ClassroomScheduleQuery {
 /// 教室课表中一个课程块对应的排课记录。
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct ClassroomScheduleSession {
     pub classroom: String,
     pub day_of_week: DayOfWeek,
@@ -129,6 +141,7 @@ pub struct ClassroomScheduleSession {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record), uniffi(name = "EduExam"))]
 pub struct Exam {
     pub campus: String,
     pub session: String,
@@ -300,7 +313,7 @@ pub struct CourseGrade {
     pub course_name: String,
     pub group_name: String,
     pub grade: i64,
-    pub grade_detail_url: Url,
+    pub grade_detail_url: String,
     pub study_mode: String,
     pub grade_identifier: String,
     pub credit: f64,
@@ -316,6 +329,7 @@ pub struct CourseGrade {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GradeComponent {
     pub component_type: String,
     pub grade: f64,
@@ -324,6 +338,7 @@ pub struct GradeComponent {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct GradeDetail {
     pub components: Vec<GradeComponent>,
     pub total_grade: i64,

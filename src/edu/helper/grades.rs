@@ -1,8 +1,8 @@
 use reqwest::header::CONTENT_TYPE;
 use scraper::{ElementRef, Html, Selector};
-use url::Url;
 
 use crate::{
+    SessionRequestError,
     connection::ConnectionMode,
     url_factory::{ServiceDomain, make_url},
 };
@@ -50,9 +50,7 @@ impl EduHelper {
 
         parse_course_grades(self.mode, &body)
     }
-}
 
-impl EduHelper {
     pub async fn get_available_semesters_for_course_grades(&self) -> Result<Vec<String>, EduError> {
         let url = make_url(
             self.mode,
@@ -65,10 +63,19 @@ impl EduHelper {
         parse_available_semesters_for_course_grades(&body)
     }
 
-    pub async fn get_grade_detail(&self, url: &Url) -> Result<GradeDetail, EduError> {
+    /// 使用成绩查询结果中的详情 URL 获取课程成绩构成。
+    pub async fn get_grade_detail(&self, url: &str) -> Result<GradeDetail, EduError> {
         let response = self
-            .request(|| self.session.client.get(url.clone()))
-            .await?;
+            .request(|| self.session.client.get(url))
+            .await
+            .map_err(|error| match error {
+                EduError::SessionRequest(SessionRequestError::Network(error))
+                    if error.is_builder() =>
+                {
+                    grade_detail_error("无效的成绩详情 URL")
+                }
+                error => error,
+            })?;
         let body = response.text();
 
         parse_grade_detail(&body)
@@ -142,16 +149,16 @@ fn parse_course_grades(mode: ConnectionMode, body: &str) -> Result<Vec<CourseGra
     Ok(grades)
 }
 
-fn parse_grade_detail_url(mode: ConnectionMode, value: &str) -> Result<Url, EduError> {
-    const PREFIX: &str = "javascript:openWindow('/";
+fn parse_grade_detail_url(mode: ConnectionMode, value: &str) -> Result<String, EduError> {
+    const PREFIX: &str = "javascript:openWindow('";
     const SUFFIX: &str = "',700,500)";
 
     let relative_path = value
         .strip_prefix(PREFIX)
         .and_then(|value| value.strip_suffix(SUFFIX))
+        .filter(|path| path.starts_with('/'))
         .ok_or_else(|| course_grades_error(format!("成绩详情URL格式无效: {value}")))?;
-    let url = make_url(mode, ServiceDomain::Education, &format!("/{relative_path}"));
-    Url::parse(&url).map_err(|error| course_grades_error(format!("成绩详情URL解析失败: {error}")))
+    Ok(make_url(mode, ServiceDomain::Education, relative_path))
 }
 
 fn parse_available_semesters_for_course_grades(body: &str) -> Result<Vec<String>, EduError> {

@@ -16,6 +16,7 @@ use super::{
 
 const CLASSROOM_SCHEDULE_PATH: &str = "/jsxsd/kbcx/kbxx_classroom_ifr";
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
 impl EduHelper {
     /// 获取教室课表。指定周次时，返回的排课记录只包含范围内的周次。
     pub async fn get_classroom_schedule(

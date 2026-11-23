@@ -7,6 +7,7 @@ use super::EduHelper;
 
 const PROFILE_PATH: &str = "/jsxsd/grxx/xsxx";
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
 impl EduHelper {
     pub async fn get_profile(&self) -> Result<Profile, EduError> {
         let url = make_url(self.mode, ServiceDomain::Education, PROFILE_PATH);
