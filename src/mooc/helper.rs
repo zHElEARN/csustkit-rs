@@ -71,7 +71,12 @@ impl MoocHelper {
 
         let name = text(elements.get(1).copied());
         let last_login_time = text(elements.get(2).copied()).replace("登录时间：", "");
-        let total_online_time = text(elements.get(3).copied()).replace("在线总时长： ", "");
+        let total_online_time = text(elements.get(3).copied());
+        let total_online_time = total_online_time
+            .strip_prefix("在线总时长：")
+            .unwrap_or(&total_online_time)
+            .trim()
+            .to_owned();
         let login_count_text = text(elements.get(4).copied()).replace("登录次数：", "");
         let login_count = login_count_text
             .parse::<i64>()
