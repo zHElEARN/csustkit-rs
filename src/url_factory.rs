@@ -4,13 +4,14 @@ const WEBVPN_BASE: &str = "https://vpn.csust.edu.cn";
 const WEBVPN_PREFIX: &str = "webvpn";
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) enum ServiceDomain {
+pub enum ServiceDomain {
     AuthServer,
     CampusCard,
     Chaoxing,
     ChaoxingApi,
     Education,
     Ehall,
+    Eval,
     Mooc,
     PhysicsExperiment,
 }
@@ -22,7 +23,8 @@ impl ServiceDomain {
             | Self::CampusCard
             | Self::Chaoxing
             | Self::ChaoxingApi
-            | Self::Ehall => "https",
+            | Self::Ehall
+            | Self::Eval => "https",
             Self::Education | Self::Mooc | Self::PhysicsExperiment => "http",
         }
     }
@@ -35,6 +37,7 @@ impl ServiceDomain {
             Self::ChaoxingApi => "mooc1-api.chaoxing.com",
             Self::Education => "xk.csust.edu.cn",
             Self::Ehall => "ehall.csust.edu.cn",
+            Self::Eval => "zbxt.csust.edu.cn",
             Self::Mooc => "pt.csust.edu.cn",
             Self::PhysicsExperiment => "10.255.65.52",
         }
@@ -48,13 +51,14 @@ impl ServiceDomain {
             Self::ChaoxingApi => "d529fd82bb238cec8e955f0dcc78df9c9c3b68d58d3df59d4c7d1ec8318c66d6",
             Self::Education => "505c0e70383db2ebb7035169513d1ffa",
             Self::Ehall => "1e2b5c384f0dc42e4d0db781d590f8e2f8f129ae812718586ddba3948db7b103",
+            Self::Eval => "e3e5295206d19ea6a84a70370bb4a4db1c0176decbcfae350b6673a608d0d751",
             Self::Mooc => "ca1e69080fcc45ac45bed760950fd677",
             Self::PhysicsExperiment => "ee536efb7808aac9b0bc36403333c380",
         }
     }
 }
 
-pub(crate) fn make_url(mode: ConnectionMode, domain: ServiceDomain, path: &str) -> String {
+pub fn make_url(mode: ConnectionMode, domain: ServiceDomain, path: &str) -> String {
     let safe_path = if path.starts_with('/') {
         path.to_owned()
     } else {
@@ -78,5 +82,38 @@ pub(crate) fn make_url(mode: ConnectionMode, domain: ServiceDomain, path: &str) 
                 safe_path
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ConnectionMode, ServiceDomain, make_url};
+
+    #[test]
+    fn builds_eval_direct_url_without_leading_slash() {
+        assert_eq!(
+            make_url(
+                ConnectionMode::Direct,
+                ServiceDomain::Eval,
+                "api/manage/cas/toUrl?type=pc"
+            ),
+            "https://zbxt.csust.edu.cn/api/manage/cas/toUrl?type=pc"
+        );
+    }
+
+    #[test]
+    fn builds_eval_webvpn_url_with_query() {
+        assert_eq!(
+            make_url(
+                ConnectionMode::WebVpn,
+                ServiceDomain::Eval,
+                "/api/manage/cas/toUrl?type=pc"
+            ),
+            concat!(
+                "https://vpn.csust.edu.cn/https/webvpn",
+                "e3e5295206d19ea6a84a70370bb4a4db1c0176decbcfae350b6673a608d0d751",
+                "/api/manage/cas/toUrl?type=pc"
+            )
+        );
     }
 }
