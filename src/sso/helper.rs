@@ -1,8 +1,5 @@
 use encoding_rs::UTF_8;
-use reqwest::{
-    Response,
-    header::{LOCATION, SET_COOKIE},
-};
+use reqwest::{Response, header::LOCATION};
 use url::Url;
 
 use crate::{
@@ -281,14 +278,6 @@ impl SsoHelper {
 
             if !response.status().is_redirection() {
                 return Ok(response);
-            }
-
-            for cookie in response.headers().get_all(SET_COOKIE) {
-                if let Ok(cookie) = cookie.to_str() {
-                    self.session
-                        .cookie_jar
-                        .add_cookie_str(cookie, response.url());
-                }
             }
 
             let next_url = response

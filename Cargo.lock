@@ -355,6 +355,7 @@ dependencies = [
  "base64",
  "cbc",
  "chrono",
+ "cookie_store",
  "dotenvy",
  "encoding_rs",
  "getrandom 0.4.3",
