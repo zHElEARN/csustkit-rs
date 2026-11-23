@@ -103,8 +103,8 @@ impl SsoHelper {
         password: String,
         captcha: Option<String>,
     ) -> Result<(), SsoError> {
-        let encrypted_password =
-            encrypt_password(&password, &login_form.pwd_encrypt_salt).unwrap_or(password);
+        let encrypted_password = encrypt_password(&password, &login_form.pwd_encrypt_salt)
+            .map_err(|()| SsoError::PasswordEncryptionFailed)?;
         let captcha = captcha.unwrap_or_default();
         let params = [
             ("username", username.as_str()),

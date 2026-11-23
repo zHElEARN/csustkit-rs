@@ -9,6 +9,8 @@ pub enum SsoError {
     GetLoginFormFailed(String),
     #[error("验证码获取失败")]
     CaptchaRetrievalFailed,
+    #[error("登录密码加密失败")]
+    PasswordEncryptionFailed,
     #[error("登录失败: {0}")]
     LoginFailed(String),
     #[error("账号信息待完善，请前往网页端完善信息")]
