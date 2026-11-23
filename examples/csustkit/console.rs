@@ -58,10 +58,10 @@ pub fn select<'a, T>(title: &str, items: &'a [T], display: impl Fn(&T) -> String
         if input == "0" {
             return None;
         }
-        if let Ok(index) = input.parse::<usize>() {
-            if let Some(item) = items.get(index.saturating_sub(1)) {
-                return Some(item);
-            }
+        if let Ok(index) = input.parse::<usize>()
+            && let Some(item) = items.get(index.saturating_sub(1))
+        {
+            return Some(item);
         }
         println!("输入无效，请重新选择。");
     }
@@ -78,10 +78,10 @@ pub fn select_value<T: Copy>(title: &str, options: &[(T, &str)]) -> Option<T> {
         if input == "0" {
             return None;
         }
-        if let Ok(index) = input.parse::<usize>() {
-            if let Some((value, _)) = options.get(index.saturating_sub(1)) {
-                return Some(*value);
-            }
+        if let Ok(index) = input.parse::<usize>()
+            && let Some((value, _)) = options.get(index.saturating_sub(1))
+        {
+            return Some(*value);
         }
         println!("输入无效，请重新选择。");
     }
