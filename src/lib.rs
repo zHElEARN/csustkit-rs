@@ -12,6 +12,12 @@ mod url_factory;
 pub mod utils;
 pub mod webvpn;
 
+#[cfg(feature = "uniffi")]
+mod ffi;
+
+#[cfg(feature = "uniffi")]
+uniffi::setup_scaffolding!();
+
 pub use connection::ConnectionMode;
 pub use enums::{Campus, DayOfWeek};
 pub use session::{

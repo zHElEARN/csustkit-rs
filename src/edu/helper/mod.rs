@@ -20,6 +20,7 @@ mod profile;
 mod schedule;
 mod semester;
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct EduHelper {
     mode: ConnectionMode,
     session: CsustSession,

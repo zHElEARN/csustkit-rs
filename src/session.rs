@@ -25,6 +25,7 @@ pub enum SessionRequestError {
 /// The client times out after 60 seconds of connecting or waiting for
 /// response data. Each successful read resets the read timeout.
 #[derive(Clone)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct CsustSession {
     pub(crate) client: Client,
     cookie_jar: Arc<SessionCookieJar>,

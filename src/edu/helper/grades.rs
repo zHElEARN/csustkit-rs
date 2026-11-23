@@ -15,6 +15,7 @@ use super::{EduHelper, element_text};
 const COURSE_GRADES_PATH: &str = "/jsxsd/kscj/cjcx_list";
 const COURSE_GRADE_SEMESTERS_PATH: &str = "/jsxsd/kscj/cjcx_query";
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
 impl EduHelper {
     pub async fn get_course_grades(
         &self,
@@ -49,7 +50,9 @@ impl EduHelper {
 
         parse_course_grades(self.mode, &body)
     }
+}
 
+impl EduHelper {
     pub async fn get_available_semesters_for_course_grades(&self) -> Result<Vec<String>, EduError> {
         let url = make_url(
             self.mode,

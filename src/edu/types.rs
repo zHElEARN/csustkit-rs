@@ -146,6 +146,7 @@ pub struct Exam {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum DisplayMode {
     #[default]
     BestGrade,
@@ -172,6 +173,7 @@ impl DisplayMode {
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum StudyMode {
     #[default]
     Major,
@@ -201,6 +203,7 @@ impl StudyMode {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Enum))]
 pub enum CourseNature {
     Other,
     PublicCourse,
@@ -267,6 +270,7 @@ impl CourseNature {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct CourseGradeQuery {
     pub academic_year_semester: Option<String>,
     pub course_nature: Option<CourseNature>,
@@ -289,6 +293,7 @@ impl Default for CourseGradeQuery {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct CourseGrade {
     pub semester: String,
     pub course_id: String,
@@ -325,6 +330,7 @@ pub struct GradeDetail {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum EduError {
     #[error("教务请求失败: {0}")]
     SessionRequest(#[from] SessionRequestError),

@@ -29,6 +29,7 @@ const WEBVPN_ENCLIENT_URL: &str = "https://vpn.csust.edu.cn/enclient/";
 const WEBVPN_CAS_CHECK_URL: &str =
     "https://vpn.csust.edu.cn/enclient/api/users/admin/custom/page/login/sso/cas";
 
+#[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
 pub struct SsoHelper {
     mode: ConnectionMode,
     session: CsustSession,
@@ -38,7 +39,10 @@ impl SsoHelper {
     pub fn new(mode: ConnectionMode, session: CsustSession) -> Self {
         Self { mode, session }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl SsoHelper {
     pub async fn get_login_form(&self) -> Result<SsoLoginForm, SsoError> {
         let response = self
             .session
@@ -153,7 +157,9 @@ impl SsoHelper {
             Err(login_failure_from_body(&body, final_url))
         }
     }
+}
 
+impl SsoHelper {
     /// 获取当前统一身份认证会话的用户资料。
     pub async fn get_profile(&self) -> Result<SsoProfile, SsoError> {
         let url = make_url(self.mode, ServiceDomain::Ehall, "/getLoginUser");
@@ -208,7 +214,10 @@ impl SsoHelper {
             )))
         }
     }
+}
 
+#[cfg_attr(feature = "uniffi", uniffi::export(async_runtime = "tokio"))]
+impl SsoHelper {
     /// 从已登录的统一身份认证会话登录教务系统。
     pub async fn login_to_education(&self) -> Result<(), SsoError> {
         let education_url = make_url(self.mode, ServiceDomain::Education, EDUCATION_SSO_PATH);
@@ -230,7 +239,9 @@ impl SsoHelper {
             Ok(())
         }
     }
+}
 
+impl SsoHelper {
     pub async fn is_logged_in(&self) -> bool {
         self.get_profile().await.is_ok()
     }

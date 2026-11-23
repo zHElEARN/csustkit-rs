@@ -4,6 +4,7 @@ use std::time::SystemTimeError;
 use crate::SessionRequestError;
 
 #[derive(Debug, thiserror::Error)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum SsoError {
     #[error("获取登录表单失败: {0}")]
     GetLoginFormFailed(String),
@@ -34,6 +35,7 @@ pub enum SsoError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "uniffi", derive(uniffi::Record))]
 pub struct SsoLoginForm {
     pub pwd_encrypt_salt: String,
     pub execution: String,
