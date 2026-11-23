@@ -7,9 +7,9 @@ use crate::{
 
 #[uniffi::export]
 impl Campus {
-    #[uniffi::method(name = "name")]
-    fn name_string(&self) -> String {
-        self.name().to_owned()
+    #[uniffi::method(name = "short_name")]
+    fn short_name_string(&self) -> String {
+        self.short_name().to_owned()
     }
 
     #[uniffi::method(name = "display_name")]
