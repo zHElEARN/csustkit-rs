@@ -53,8 +53,9 @@ impl PhysicsExperimentHelper {
         let response = perform_request::<reqwest::Error>(request, None)
             .await
             .map_err(reqwest::Error::without_url)?;
-        if !response.status.is_success() || !response.text().contains("true") {
-            return Err(PhysicsExperimentError::LoginFailed(response.status));
+        let body = response.text();
+        if !response.status.is_success() || !body.contains("true") {
+            return Err(PhysicsExperimentError::LoginFailed(body.into_owned()));
         }
         Ok(())
     }

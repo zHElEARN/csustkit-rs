@@ -45,8 +45,8 @@ pub struct CourseGrade {
 #[derive(Debug, thiserror::Error)]
 #[cfg_attr(feature = "uniffi", derive(uniffi::Error), uniffi(flat_error))]
 pub enum PhysicsExperimentError {
-    #[error("大物实验平台未确认登录成功（HTTP {0}）")]
-    LoginFailed(reqwest::StatusCode),
+    #[error("登录失败: {0}")]
+    LoginFailed(String),
     #[error("获取大物实验课表失败: {0}")]
     SchedulesRetrievalFailed(String),
     #[error("获取大物实验成绩失败: {0}")]
