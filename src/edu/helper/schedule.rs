@@ -13,15 +13,6 @@ use super::super::{Course, CourseSchedule, ScheduleSession, SemesterOptions, typ
 use super::{EduHelper, element_text};
 
 const COURSE_SCHEDULE_PATH: &str = "/jsxsd/xskb/xskb_list.do";
-const COURSE_SCHEDULE_WEEKDAYS: [DayOfWeek; 7] = [
-    DayOfWeek::Sunday,
-    DayOfWeek::Monday,
-    DayOfWeek::Tuesday,
-    DayOfWeek::Wednesday,
-    DayOfWeek::Thursday,
-    DayOfWeek::Friday,
-    DayOfWeek::Saturday,
-];
 
 impl EduHelper {
     pub async fn get_available_semesters_for_course_schedule(
@@ -145,7 +136,7 @@ fn parse_course_schedule(body: &str) -> Result<CourseSchedule, EduError> {
             continue;
         }
         for (column_index, cell) in row.select(&cell_selector).enumerate() {
-            let day_of_week = COURSE_SCHEDULE_WEEKDAYS
+            let day_of_week = DayOfWeek::ALL
                 .get(column_index)
                 .copied()
                 .ok_or_else(|| schedule_error(format!("星期索引无效: {column_index}")))?;

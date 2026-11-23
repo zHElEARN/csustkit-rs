@@ -213,7 +213,7 @@ fn parse_columns(
             });
         }
     }
-    if seen_days.len() != 7 || section_cells.next().is_some() {
+    if seen_days.len() != DayOfWeek::ALL.len() || section_cells.next().is_some() {
         return Err(classroom_error("星期与节次表头不匹配"));
     }
     Ok(columns)

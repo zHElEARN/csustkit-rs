@@ -34,6 +34,16 @@ pub enum DayOfWeek {
 }
 
 impl DayOfWeek {
+    pub const ALL: [Self; 7] = [
+        Self::Sunday,
+        Self::Monday,
+        Self::Tuesday,
+        Self::Wednesday,
+        Self::Thursday,
+        Self::Friday,
+        Self::Saturday,
+    ];
+
     pub(crate) fn from_chinese_name(name: &str) -> Option<Self> {
         Some(match name {
             "星期一" => Self::Monday,

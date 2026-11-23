@@ -45,6 +45,8 @@ pub enum SemesterType {
 }
 
 impl SemesterType {
+    pub const ALL: [Self; 3] = [Self::Beginning, Self::Middle, Self::End];
+
     pub(super) const fn display_name(self) -> &'static str {
         match self {
             Self::Beginning => "期初",
@@ -151,6 +153,8 @@ pub enum DisplayMode {
 }
 
 impl DisplayMode {
+    pub const ALL: [Self; 2] = [Self::BestGrade, Self::AllGrades];
+
     pub(super) const fn request_id(self) -> &'static str {
         match self {
             Self::BestGrade => "max",
@@ -169,6 +173,8 @@ pub enum StudyMode {
 }
 
 impl StudyMode {
+    pub const ALL: [Self; 3] = [Self::Major, Self::Minor, Self::All];
+
     pub(super) const fn request_id(self) -> &'static str {
         match self {
             Self::Major => "0",

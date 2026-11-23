@@ -18,6 +18,8 @@ pub enum AssignmentStatus {
 }
 
 impl AssignmentStatus {
+    pub const ALL: [Self; 3] = [Self::Unsubmitted, Self::PendingReview, Self::Completed];
+
     pub const fn display_name(self) -> &'static str {
         match self {
             Self::Unsubmitted => "未提交",
@@ -27,7 +29,7 @@ impl AssignmentStatus {
     }
 
     pub(super) fn from_display_name(name: &str) -> Option<Self> {
-        [Self::Unsubmitted, Self::PendingReview, Self::Completed]
+        Self::ALL
             .into_iter()
             .find(|status| status.display_name() == name)
     }
