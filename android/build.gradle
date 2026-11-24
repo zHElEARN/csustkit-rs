@@ -14,10 +14,8 @@ def rustRoot = layout.projectDirectory.dir('..')
 def cargoManifest = rustRoot.file('Cargo.toml')
 def cargoLock = rustRoot.file('Cargo.lock')
 def bindgenConfig = rustRoot.file('uniffi.toml')
-def nativeTargets = [
-    'arm64-v8a': 'aarch64-linux-android',
-    'x86_64': 'x86_64-linux-android',
-]
+def androidAbi = 'arm64-v8a'
+def rustTarget = 'aarch64-linux-android'
 def androidApiLevel = 26
 def androidNdkVersion = '28.2.13676358'
 def cargoTargetDir = layout.buildDirectory.dir('cargo')
@@ -63,35 +61,27 @@ def ndkDirectory = androidComponents.sdkComponents.ndkDirectory
 def buildRust = tasks.register('buildRustAndroid', Exec) {
     workingDir rustRoot.asFile
     inputs.files(cargoManifest, cargoLock, fileTree(rustRoot.dir('src')))
-    inputs.property('targets', nativeTargets)
+    inputs.property('androidAbi', androidAbi)
+    inputs.property('rustTarget', rustTarget)
     inputs.property('androidApiLevel', androidApiLevel)
     inputs.property('ndkVersion', androidNdkVersion)
     outputs.dir(jniLibsDir)
 
-    def targetArguments = nativeTargets.keySet().collectMany { ['--target', it] }
-    commandLine(['cargo', 'ndk'] + targetArguments + [
+    commandLine 'cargo', 'ndk', '--target', androidAbi,
         '--platform', androidApiLevel.toString(), 'rustc',
-        '--locked', '--release', '--features', 'uniffi', '--lib', '--crate-type', 'cdylib',
-    ])
+        '--locked', '--release', '--features', 'uniffi', '--lib', '--crate-type', 'cdylib'
     doFirst {
         environment 'ANDROID_NDK_HOME', ndkDirectory.get().asFile.absolutePath
         environment 'CARGO_TARGET_DIR', cargoTargetDir.get().asFile.absolutePath
-        // macOS 27 dyld can reject stripped Rust proc-macro dylibs.
-        environment 'CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP', 'none'
     }
     doLast {
-        def nativeLibraries = nativeTargets.collectEntries { abi, target ->
-            def library = cargoTargetDir.get().file("${target}/release/libcsustkit.so").asFile
-            if (!library.isFile()) {
-                throw new GradleException("Cargo did not produce ${library}")
-            }
-            [(abi): library]
+        def library = cargoTargetDir.get().file("${rustTarget}/release/libcsustkit.so").asFile
+        if (!library.isFile()) {
+            throw new GradleException("Cargo did not produce ${library}")
         }
         project.sync { spec ->
             spec.into jniLibsDir
-            nativeLibraries.each { abi, library ->
-                spec.from(library) { nativeSpec -> nativeSpec.into abi }
-            }
+            spec.from(library) { nativeSpec -> nativeSpec.into androidAbi }
         }
     }
 }
@@ -99,14 +89,14 @@ def buildRust = tasks.register('buildRustAndroid', Exec) {
 def generateKotlinBindings = tasks.register('generateKotlinBindings', Exec) {
     dependsOn buildRust
     workingDir rustRoot.asFile
-    def nativeLibrary = jniLibsDir.map { it.file('arm64-v8a/libcsustkit.so') }
+    def nativeLibrary = jniLibsDir.map { it.file("${androidAbi}/libcsustkit.so") }
     inputs.files(cargoManifest, cargoLock, bindgenConfig, rustRoot.file('tools/csustkit-bindgen.rs'), nativeLibrary)
     outputs.dir(kotlinBindingsDir)
 
     doFirst {
         environment 'CARGO_TARGET_DIR', cargoTargetDir.get().asFile.absolutePath
         commandLine 'cargo', 'run', '--locked', '--features', 'uniffi-bindgen', '--bin', 'csustkit-bindgen', '--',
-            'generate', '--library', '--language', 'kotlin', '--no-format',
+            'generate', '--language', 'kotlin', '--no-format',
             '--out-dir', kotlinBindingsDir.get().asFile.absolutePath, nativeLibrary.get().asFile.absolutePath
         project.delete kotlinBindingsDir
     }
@@ -120,7 +110,7 @@ def prepareRustlsRuntime = tasks.register('prepareRustlsRuntime') {
         def metadata = providers.exec {
             workingDir rustRoot.asFile
             commandLine 'cargo', 'metadata', '--locked', '--format-version', '1',
-                '--filter-platform', nativeTargets['arm64-v8a'], '--features', 'uniffi'
+                '--filter-platform', rustTarget, '--features', 'uniffi'
         }.standardOutput.asText.get()
         def verifier = new JsonSlurper().parseText(metadata).packages.find {
             it.name == 'rustls-platform-verifier-android'
