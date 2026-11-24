@@ -1,4 +1,4 @@
-use std::{ops::RangeInclusive, sync::Arc, time::SystemTime};
+use std::{ops::RangeInclusive, time::SystemTime};
 
 use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, TimeDelta, Utc};
 use url::Url;
@@ -142,38 +142,31 @@ pub enum SessionInitError {
 
 #[uniffi::export]
 impl CsustSession {
-    #[uniffi::constructor(name = "new")]
-    pub fn new_shared() -> Result<Arc<Self>, SessionInitError> {
-        #[cfg(target_os = "android")]
-        android::check_initialized()?;
-        Ok(Arc::new(Self::new()?))
-    }
-
-    #[uniffi::constructor]
-    pub fn configured(user_agent: Option<String>) -> Result<Arc<Self>, SessionInitError> {
+    #[uniffi::constructor(name = "new", default(user_agent))]
+    pub fn new_with_user_agent(user_agent: Option<String>) -> Result<Self, SessionInitError> {
         #[cfg(target_os = "android")]
         android::check_initialized()?;
         let mut builder = Self::builder();
         if let Some(user_agent) = user_agent {
             builder = builder.user_agent(user_agent);
         }
-        Ok(Arc::new(builder.build()?))
+        Ok(builder.build()?)
     }
 }
 
 #[uniffi::export]
 impl SsoHelper {
     #[uniffi::constructor(name = "new")]
-    pub fn with_shared_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self::new(mode, session.as_ref().clone()))
+    pub fn with_shared_session(mode: ConnectionMode, session: &CsustSession) -> Self {
+        Self::new(mode, session.clone())
     }
 }
 
 #[uniffi::export]
 impl EduHelper {
     #[uniffi::constructor(name = "new")]
-    pub fn with_shared_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self::new(mode, session.as_ref().clone()))
+    pub fn with_shared_session(mode: ConnectionMode, session: &CsustSession) -> Self {
+        Self::new(mode, session.clone())
     }
 }
 
@@ -193,31 +186,31 @@ impl EduHelper {
 #[uniffi::export]
 impl MoocHelper {
     #[uniffi::constructor(name = "new")]
-    pub fn with_shared_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self::new(mode, session.as_ref().clone()))
+    pub fn with_shared_session(mode: ConnectionMode, session: &CsustSession) -> Self {
+        Self::new(mode, session.clone())
     }
 }
 
 #[uniffi::export]
 impl ChaoxingHelper {
     #[uniffi::constructor(name = "new")]
-    pub fn with_shared_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self::new(mode, session.as_ref().clone()))
+    pub fn with_shared_session(mode: ConnectionMode, session: &CsustSession) -> Self {
+        Self::new(mode, session.clone())
     }
 }
 
 #[uniffi::export]
 impl CampusCardHelper {
     #[uniffi::constructor(name = "new")]
-    pub fn with_shared_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self::new(mode, session.as_ref().clone()))
+    pub fn with_shared_session(mode: ConnectionMode, session: &CsustSession) -> Self {
+        Self::new(mode, session.clone())
     }
 }
 
 #[uniffi::export]
 impl PhysicsExperimentHelper {
     #[uniffi::constructor(name = "new")]
-    pub fn with_shared_session(mode: ConnectionMode, session: Arc<CsustSession>) -> Arc<Self> {
-        Arc::new(Self::new(mode, session.as_ref().clone()))
+    pub fn with_shared_session(mode: ConnectionMode, session: &CsustSession) -> Self {
+        Self::new(mode, session.clone())
     }
 }
