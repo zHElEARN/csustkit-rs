@@ -130,13 +130,6 @@ uniffi::custom_type!(Count, u64, {
     try_lift: |value| Ok(usize::try_from(value)?),
 });
 
-/// 为会话附加的根证书数据。
-#[derive(uniffi::Enum)]
-pub enum SessionRootCertificate {
-    Pem { data: Vec<u8> },
-    Der { data: Vec<u8> },
-}
-
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 #[uniffi(flat_error)]
 pub enum SessionInitError {
@@ -157,22 +150,12 @@ impl CsustSession {
     }
 
     #[uniffi::constructor]
-    pub fn configured(
-        user_agent: Option<String>,
-        root_certificates: Vec<SessionRootCertificate>,
-    ) -> Result<Arc<Self>, SessionInitError> {
+    pub fn configured(user_agent: Option<String>) -> Result<Arc<Self>, SessionInitError> {
         #[cfg(target_os = "android")]
         android::check_initialized()?;
         let mut builder = Self::builder();
         if let Some(user_agent) = user_agent {
             builder = builder.user_agent(user_agent);
-        }
-        for certificate in root_certificates {
-            let certificate = match certificate {
-                SessionRootCertificate::Pem { data } => reqwest::Certificate::from_pem(&data),
-                SessionRootCertificate::Der { data } => reqwest::Certificate::from_der(&data),
-            }?;
-            builder = builder.add_root_certificate(certificate);
         }
         Ok(Arc::new(builder.build()?))
     }

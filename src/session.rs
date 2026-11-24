@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use reqwest::{Certificate, Client, redirect::Policy};
+use reqwest::{Client, redirect::Policy};
 use url::Url;
 
 mod cookies;
@@ -67,17 +67,11 @@ impl CsustSession {
 #[derive(Default)]
 pub struct CsustSessionBuilder {
     user_agent: Option<String>,
-    root_certificates: Vec<Certificate>,
 }
 
 impl CsustSessionBuilder {
     pub fn user_agent(mut self, user_agent: impl Into<String>) -> Self {
         self.user_agent = Some(user_agent.into());
-        self
-    }
-
-    pub fn add_root_certificate(mut self, certificate: Certificate) -> Self {
-        self.root_certificates.push(certificate);
         self
     }
 
@@ -89,7 +83,6 @@ impl CsustSessionBuilder {
             .cookie_provider(Arc::clone(&cookie_jar))
             .redirect(Policy::limited(10))
             .user_agent(self.user_agent.as_deref().unwrap_or(USER_AGENT))
-            .tls_certs_merge(self.root_certificates)
             .build()?;
 
         Ok(CsustSession { client, cookie_jar })
