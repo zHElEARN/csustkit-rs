@@ -7,11 +7,6 @@ edition = "2024"
 crate-type = ["rlib", "staticlib"]
 
 [[bin]]
-name = "csustkit-bindgen-swift"
-path = "tools/csustkit-bindgen-swift.rs"
-required-features = ["uniffi-bindgen"]
-
-[[bin]]
 name = "csustkit-bindgen"
 path = "tools/csustkit-bindgen.rs"
 required-features = ["uniffi-bindgen"]
