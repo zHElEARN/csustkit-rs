@@ -1,0 +1,173 @@
+import groovy.json.JsonSlurper
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.zip.ZipFile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+plugins {
+    id 'com.android.library' version '8.13.2'
+    id 'org.jetbrains.kotlin.android' version '2.2.20'
+    id 'maven-publish'
+}
+
+def rustRoot = layout.projectDirectory.dir('..')
+def cargoManifest = rustRoot.file('Cargo.toml')
+def cargoLock = rustRoot.file('Cargo.lock')
+def bindgenConfig = rustRoot.file('uniffi.toml')
+def nativeTargets = [
+    'arm64-v8a': 'aarch64-linux-android',
+    'x86_64': 'x86_64-linux-android',
+]
+def androidApiLevel = 26
+def androidNdkVersion = '28.2.13676358'
+def cargoTargetDir = layout.buildDirectory.dir('cargo')
+def jniLibsDir = layout.buildDirectory.dir('generated/jniLibs')
+def kotlinBindingsDir = layout.buildDirectory.dir('generated/kotlin')
+def rustlsJar = layout.buildDirectory.file('generated/rustls/rustls-platform-verifier.jar')
+
+group = 'com.zhelearn'
+version = (cargoManifest.asFile.text =~ /(?m)^version = "([^"]+)"$/)[0][1]
+
+android {
+    namespace = 'com.zhelearn.csustkit'
+    compileSdk = 36
+    ndkVersion = androidNdkVersion
+
+    defaultConfig {
+        minSdk = androidApiLevel
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    sourceSets {
+        main.java.srcDir kotlinBindingsDir
+        main.jniLibs.srcDir jniLibsDir
+    }
+
+    publishing {
+        singleVariant('release')
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_1_8
+    }
+}
+
+def ndkDirectory = androidComponents.sdkComponents.ndkDirectory
+def buildRust = tasks.register('buildRustAndroid', Exec) {
+    workingDir rustRoot.asFile
+    inputs.files(cargoManifest, cargoLock, fileTree(rustRoot.dir('src')))
+    inputs.property('targets', nativeTargets)
+    inputs.property('androidApiLevel', androidApiLevel)
+    inputs.property('ndkVersion', androidNdkVersion)
+    outputs.dir(jniLibsDir)
+
+    def targetArguments = nativeTargets.keySet().collectMany { ['--target', it] }
+    commandLine(['cargo', 'ndk'] + targetArguments + [
+        '--platform', androidApiLevel.toString(), 'rustc',
+        '--locked', '--release', '--features', 'uniffi', '--lib', '--crate-type', 'cdylib',
+    ])
+    doFirst {
+        environment 'ANDROID_NDK_HOME', ndkDirectory.get().asFile.absolutePath
+        environment 'CARGO_TARGET_DIR', cargoTargetDir.get().asFile.absolutePath
+        // macOS 27 dyld can reject stripped Rust proc-macro dylibs.
+        environment 'CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP', 'none'
+    }
+    doLast {
+        def nativeLibraries = nativeTargets.collectEntries { abi, target ->
+            def library = cargoTargetDir.get().file("${target}/release/libcsustkit.so").asFile
+            if (!library.isFile()) {
+                throw new GradleException("Cargo did not produce ${library}")
+            }
+            [(abi): library]
+        }
+        project.sync { spec ->
+            spec.into jniLibsDir
+            nativeLibraries.each { abi, library ->
+                spec.from(library) { nativeSpec -> nativeSpec.into abi }
+            }
+        }
+    }
+}
+
+def generateKotlinBindings = tasks.register('generateKotlinBindings', Exec) {
+    dependsOn buildRust
+    workingDir rustRoot.asFile
+    def nativeLibrary = jniLibsDir.map { it.file('arm64-v8a/libcsustkit.so') }
+    inputs.files(cargoManifest, cargoLock, bindgenConfig, rustRoot.file('tools/csustkit-bindgen.rs'), nativeLibrary)
+    outputs.dir(kotlinBindingsDir)
+
+    doFirst {
+        environment 'CARGO_TARGET_DIR', cargoTargetDir.get().asFile.absolutePath
+        commandLine 'cargo', 'run', '--locked', '--features', 'uniffi-bindgen', '--bin', 'csustkit-bindgen', '--',
+            'generate', '--library', '--language', 'kotlin', '--no-format',
+            '--out-dir', kotlinBindingsDir.get().asFile.absolutePath, nativeLibrary.get().asFile.absolutePath
+        project.delete kotlinBindingsDir
+    }
+}
+
+def prepareRustlsRuntime = tasks.register('prepareRustlsRuntime') {
+    inputs.files(cargoManifest, cargoLock)
+    outputs.file(rustlsJar)
+
+    doLast {
+        def metadata = providers.exec {
+            workingDir rustRoot.asFile
+            commandLine 'cargo', 'metadata', '--locked', '--format-version', '1',
+                '--filter-platform', nativeTargets['arm64-v8a'], '--features', 'uniffi'
+        }.standardOutput.asText.get()
+        def verifier = new JsonSlurper().parseText(metadata).packages.find {
+            it.name == 'rustls-platform-verifier-android'
+        }
+        if (verifier == null) {
+            throw new GradleException('Cargo did not resolve rustls-platform-verifier-android')
+        }
+        // The Cargo package ships the matching AAR. Its JVM classes are the only runtime payload.
+        def artifact = "rustls-platform-verifier-${verifier.version}.aar"
+        def aar = new File(new File(verifier.manifest_path).parentFile,
+            "maven/rustls/rustls-platform-verifier/${verifier.version}/${artifact}")
+        def jar = rustlsJar.get().asFile.toPath()
+        Files.createDirectories(jar.parent)
+        new ZipFile(aar).withCloseable { zip ->
+            def classes = zip.getEntry('classes.jar')
+            if (classes == null) {
+                throw new GradleException("${aar} does not contain classes.jar")
+            }
+            zip.getInputStream(classes).withCloseable {
+                Files.copy(it, jar, StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'net.java.dev.jna:jna:5.18.1@aar'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    implementation files(rustlsJar).builtBy(prepareRustlsRuntime)
+}
+
+tasks.named('preBuild') {
+    dependsOn generateKotlinBindings
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'distribution'
+            url = layout.buildDirectory.dir('maven')
+        }
+    }
+}

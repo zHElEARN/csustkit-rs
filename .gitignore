@@ -2,5 +2,9 @@
 /.build/
 /swift/Generated/
 /swift/Artifacts/
+/android/.gradle/
+/android/.kotlin/
+/android/build/
+/android/local.properties
 
 .env*

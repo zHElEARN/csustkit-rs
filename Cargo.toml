@@ -11,8 +11,13 @@ name = "csustkit-bindgen-swift"
 path = "tools/csustkit-bindgen-swift.rs"
 required-features = ["uniffi-bindgen"]
 
+[[bin]]
+name = "csustkit-bindgen"
+path = "tools/csustkit-bindgen.rs"
+required-features = ["uniffi-bindgen"]
+
 [features]
-uniffi = ["dep:uniffi"]
+uniffi = ["dep:uniffi", "dep:jni", "dep:rustls-platform-verifier"]
 uniffi-bindgen = ["uniffi", "uniffi/cli"]
 
 [dependencies]
@@ -33,6 +38,10 @@ thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["time"] }
 uniffi = { version = "=0.32.2", optional = true, features = ["tokio"] }
 url = { version = "2.5.8", features = ["serde"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.22.4", default-features = false, optional = true }
+rustls-platform-verifier = { version = "0.7", optional = true }
 
 [dev-dependencies]
 dotenvy = "0.15"

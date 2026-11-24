@@ -2,3 +2,8 @@
 module_name = "CSUSTKitRust"
 ffi_module_name = "CSUSTKitRustFFI"
 generate_case_iterable_conformance = true
+
+[bindings.kotlin]
+package_name = "com.zhelearn.csustkit"
+disable_java_cleaner = true
+java_8_compatible = true

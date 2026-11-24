@@ -13,6 +13,8 @@ use crate::{
     sso::SsoHelper,
 };
 
+#[cfg(target_os = "android")]
+mod android;
 mod labels;
 mod schedule;
 
@@ -140,12 +142,17 @@ pub enum SessionRootCertificate {
 pub enum SessionInitError {
     #[error("无法创建校园服务会话")]
     ClientBuild(#[from] reqwest::Error),
+    #[cfg(target_os = "android")]
+    #[error("请先调用 CsustKitAndroid.initialize(context) 初始化 Android 证书验证")]
+    AndroidNotInitialized,
 }
 
 #[uniffi::export]
 impl CsustSession {
     #[uniffi::constructor(name = "new")]
     pub fn new_shared() -> Result<Arc<Self>, SessionInitError> {
+        #[cfg(target_os = "android")]
+        android::check_initialized()?;
         Ok(Arc::new(Self::new()?))
     }
 
@@ -154,6 +161,8 @@ impl CsustSession {
         user_agent: Option<String>,
         root_certificates: Vec<SessionRootCertificate>,
     ) -> Result<Arc<Self>, SessionInitError> {
+        #[cfg(target_os = "android")]
+        android::check_initialized()?;
         let mut builder = Self::builder();
         if let Some(user_agent) = user_agent {
             builder = builder.user_agent(user_agent);
