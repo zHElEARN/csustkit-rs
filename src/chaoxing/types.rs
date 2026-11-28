@@ -39,6 +39,13 @@ impl AssignmentStatus {
     }
 
     pub(super) fn from_display_name(name: &str) -> Option<Self> {
+        let name = name.trim();
+        if name == "已互评" {
+            return Some(Self::Completed);
+        }
+        if name == "待互评" {
+            return Some(Self::Unsubmitted);
+        }
         Self::ALL
             .into_iter()
             .find(|status| status.display_name() == name)
@@ -83,4 +90,25 @@ pub enum ChaoxingError {
     Network(#[from] reqwest::Error),
     #[error("处理学习通作业的 WebVPN 链接失败: {0}")]
     WebVpn(#[from] WebVpnError),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AssignmentStatus;
+
+    #[test]
+    fn parses_standard_and_peer_review_assignment_statuses() {
+        use AssignmentStatus::{Completed, PendingReview, Unsubmitted};
+
+        for (label, expected) in [
+            ("未提交", Unsubmitted),
+            ("待批阅", PendingReview),
+            ("已完成", Completed),
+            ("已互评", Completed),
+            ("待互评", Unsubmitted),
+            (" 待互评 ", Unsubmitted),
+        ] {
+            assert_eq!(AssignmentStatus::from_display_name(label), Some(expected));
+        }
+    }
 }
